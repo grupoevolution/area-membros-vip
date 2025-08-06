@@ -1,0 +1,923 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Área de Membros VIP</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --primary-color: #E50914;
+            --primary-dark: #B81D24;
+            --secondary-color: #F5F5F1;
+            --dark-bg: #141414;
+            --darker-bg: #0B0B0B;
+            --card-bg: #181818;
+            --text-color: #FFFFFF;
+            --text-secondary: #999999;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Montserrat', sans-serif;
+        }
+        
+        body {
+            background-color: #000000;
+            color: var(--text-color);
+            overflow-x: hidden;
+            padding-bottom: 80px;
+        }
+
+        /* Login Screen */
+        .login-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, #000000, #1a1a1a);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+
+        .login-container {
+            background: linear-gradient(145deg, #2a2a2a, #1a1a1a);
+            padding: 3rem 2.5rem;
+            border-radius: 20px;
+            text-align: center;
+            max-width: 400px;
+            width: 90%;
+            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.8);
+            border: 1px solid #333;
+        }
+
+        .login-logo-img {
+            width: 120px;
+            height: auto;
+            margin-bottom: 2rem;
+            border-radius: 12px;
+        }
+
+        .login-title {
+            font-size: 1.5rem;
+            margin-bottom: 2rem;
+            color: white;
+            font-weight: 600;
+        }
+
+        .login-form {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .email-input {
+            padding: 1rem 1.5rem;
+            border: 2px solid #333;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .email-input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(229, 9, 20, 0.2);
+        }
+
+        .email-input::placeholder {
+            color: #999;
+        }
+
+        .login-btn {
+            background: linear-gradient(135deg, var(--primary-color), #cc0000);
+            color: white;
+            padding: 1rem 2rem;
+            border: none;
+            border-radius: 12px;
+            font-weight: bold;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .login-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(229, 9, 20, 0.4);
+        }
+
+        .login-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Main App */
+        .main-app {
+            display: none;
+        }
+
+        .main-app.active {
+            display: block;
+        }
+
+        header {
+            background: linear-gradient(180deg, rgba(0,0,0,0.9) 0%, rgba(20,20,20,0.5) 100%);
+            padding: 1rem 4%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 100;
+            transition: background-color 0.3s ease;
+        }
+        
+        .logo {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: var(--primary-color);
+            letter-spacing: 2px;
+        }
+        
+        .user-profile {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        
+        .user-email {
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+
+        .logout-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 4px;
+            background-color: rgba(255, 255, 255, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: none;
+        }
+
+        .logout-btn:hover {
+            background-color: var(--primary-color);
+            transform: scale(1.05);
+        }
+        
+        main {
+            padding-top: 80px;
+            min-height: 100vh;
+            background-color: #000000;
+        }
+        
+        .content-wrapper {
+            padding: 2rem 4%;
+            background-color: #000000;
+        }
+        
+        .category-section {
+            margin-bottom: 4rem;
+        }
+        
+        .category-title {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 1.8rem;
+            margin-bottom: 1rem;
+            letter-spacing: 1px;
+            color: white;
+        }
+        
+        .module-grid {
+            display: flex;
+            gap: 1rem;
+            overflow-x: auto;
+            padding-bottom: 1.5rem;
+            padding-top: 0.5rem;
+            scroll-behavior: smooth;
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        
+        .module-grid::-webkit-scrollbar {
+            display: none;
+        }
+        
+        .module-card {
+            flex: 0 0 auto;
+            width: 200px;
+            height: 356px;
+            border-radius: 4px;
+            overflow: hidden;
+            position: relative;
+            cursor: pointer;
+            background-color: var(--card-bg);
+            transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            transform-origin: center bottom;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+        }
+        
+        .module-card:hover {
+            transform: scale(1.08);
+            z-index: 10;
+            box-shadow: 0 15px 30px rgba(0,0,0,0.6);
+        }
+        
+        .module-thumbnail {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: all 0.3s ease;
+        }
+        
+        .locked-overlay {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 30px;
+            height: 30px;
+            background-color: rgba(0, 0, 0, 0.7);
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 2;
+        }
+        
+        .lock-icon {
+            width: 16px;
+            height: 16px;
+        }
+
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.9);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 999;
+            backdrop-filter: blur(5px);
+        }
+        
+        .modal {
+            background-color: var(--card-bg);
+            border-radius: 8px;
+            width: 90%;
+            max-width: 900px;
+            max-height: 90vh;
+            overflow: hidden;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+            opacity: 0;
+            transform: scale(0.9);
+            transition: all 0.4s cubic-bezier(0.19, 1, 0.22, 1);
+        }
+        
+        .modal.active {
+            opacity: 1;
+            transform: scale(1);
+        }
+        
+        .modal-header {
+            position: relative;
+            height: 45vh;
+            overflow: hidden;
+        }
+        
+        .modal-banner {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .modal-header-content {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 2rem;
+            background: linear-gradient(transparent, rgba(0, 0, 0, 0.9) 80%);
+        }
+        
+        .modal-title {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            letter-spacing: 1px;
+        }
+        
+        .close-modal {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: rgba(0, 0, 0, 0.6);
+            border: none;
+            color: white;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            font-size: 1.5rem;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: all 0.3s ease;
+            z-index: 10;
+        }
+        
+        .close-modal:hover {
+            background: var(--primary-color);
+            transform: rotate(90deg);
+        }
+        
+        .modal-body {
+            padding: 2rem;
+            max-height: calc(90vh - 45vh);
+            overflow-y: auto;
+        }
+        
+        .modal-description {
+            margin-bottom: 2rem;
+            line-height: 1.8;
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+        }
+        
+        .modal-actions {
+            display: flex;
+            gap: 1.5rem;
+            align-items: center;
+        }
+        
+        .btn {
+            padding: 0.8rem 2rem;
+            border-radius: 4px;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.3s ease;
+            font-size: 0.95rem;
+        }
+        
+        .btn-primary {
+            background-color: var(--primary-color);
+            color: var(--text-color);
+        }
+        
+        .btn-primary:hover {
+            background-color: var(--primary-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(229, 9, 20, 0.4);
+        }
+
+        /* Content Viewer */
+        .content-viewer {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: #000000;
+            display: none;
+            z-index: 95;
+        }
+
+        .content-viewer.active {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .content-viewer-header {
+            background: rgba(0,0,0,0.95);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #333;
+        }
+
+        .content-viewer-title {
+            color: white;
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+
+        .content-viewer-body {
+            flex: 1;
+            padding: 2rem;
+            overflow-y: auto;
+            background: #111;
+        }
+
+        .content-item {
+            margin-bottom: 2rem;
+            background: #1a1a1a;
+            border-radius: 8px;
+            padding: 1.5rem;
+            border: 1px solid #333;
+        }
+
+        .content-item h3 {
+            color: var(--primary-color);
+            margin-bottom: 1rem;
+            font-size: 1.3rem;
+        }
+
+        .content-item img {
+            max-width: 100%;
+            border-radius: 8px;
+            margin: 1rem 0;
+        }
+
+        .content-item video {
+            width: 100%;
+            max-width: 800px;
+            border-radius: 8px;
+            margin: 1rem 0;
+        }
+
+        .content-item p {
+            line-height: 1.6;
+            color: #ccc;
+            margin-bottom: 1rem;
+        }
+
+        .content-item .content-link {
+            display: inline-block;
+            background: var(--primary-color);
+            color: white;
+            padding: 0.8rem 1.5rem;
+            border-radius: 6px;
+            text-decoration: none;
+            font-weight: 600;
+            margin: 0.5rem 0.5rem 0.5rem 0;
+            transition: all 0.3s ease;
+        }
+
+        .content-item .content-link:hover {
+            background: var(--primary-dark);
+            transform: translateY(-2px);
+        }
+
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid var(--primary-color);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 2s linear infinite;
+            margin: 20px auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error-message {
+            background: #dc3545;
+            color: white;
+            padding: 1rem;
+            border-radius: 4px;
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+
+        .success-message {
+            background: #28a745;
+            color: white;
+            padding: 1rem;
+            border-radius: 4px;
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+
+        @media (max-width: 768px) {
+            .content-wrapper {
+                padding: 2rem 2%;
+            }
+            
+            .module-card {
+                width: 160px;
+                height: 285px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Login Screen -->
+    <div class="login-screen" id="loginScreen">
+        <div class="login-container">
+            <img src="https://hotmoney.space/wp-content/uploads/2025/04/ChatGPT-Image-2-de-abr.-de-2025-14_30_25.png" 
+                 alt="Membros VIP" 
+                 class="login-logo-img">
+            <h2 class="login-title">Acesse sua área exclusiva</h2>
+            <div id="loginError"></div>
+            <form class="login-form" id="loginForm">
+                <input 
+                    type="email" 
+                    class="email-input" 
+                    id="emailInput" 
+                    placeholder="Digite seu email"
+                    required
+                >
+                <button type="submit" class="login-btn" id="loginBtn">
+                    ENTRAR
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Main App -->
+    <div class="main-app" id="mainApp">
+        <header>
+            <div class="logo">MEMBROS VIP</div>
+            <div class="user-profile">
+                <span class="user-email" id="userEmail">usuário@email.com</span>
+                <button class="logout-btn" onclick="handleLogout()" title="Sair">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M9 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H9" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M16 17L21 12L16 7" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M21 12H9" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </button>
+            </div>
+        </header>
+        
+        <main>
+            <div class="content-wrapper">
+                <!-- Categorias serão carregadas dinamicamente -->
+                <div id="categoriesContainer"></div>
+            </div>
+            
+            <!-- Modal de detalhes do produto -->
+            <div class="overlay" id="productModal">
+                <div class="modal" id="modalContent">
+                    <div class="modal-header">
+                        <img id="modalBanner" src="" alt="Banner do produto" class="modal-banner">
+                        <div class="modal-header-content">
+                            <h3 class="modal-title" id="modalTitle">Título do Produto</h3>
+                        </div>
+                        <button class="close-modal" onclick="closeModal()">&times;</button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="modal-description" id="modalDescription">
+                            Descrição detalhada do produto vai aparecer aqui.
+                        </div>
+                        <div class="modal-actions" id="modalActions">
+                            <!-- Os botões serão inseridos dinamicamente via JavaScript -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Content Viewer -->
+    <div class="content-viewer" id="contentViewer">
+        <div class="content-viewer-header">
+            <h2 class="content-viewer-title" id="contentViewerTitle">Conteúdo</h2>
+            <button class="close-modal" onclick="closeContentViewer()">&times;</button>
+        </div>
+        <div class="content-viewer-body" id="contentViewerBody">
+            <div class="loader"></div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let currentUser = null;
+        let allProducts = [];
+
+        // API functions
+        async function apiRequest(url, options = {}) {
+            try {
+                const response = await fetch(url, {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...options.headers
+                    },
+                    ...options
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                return await response.json();
+            } catch (error) {
+                console.error('API Error:', error);
+                throw error;
+            }
+        }
+
+        // Login Functions
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const email = document.getElementById('emailInput').value;
+            const loginBtn = document.getElementById('loginBtn');
+            const errorDiv = document.getElementById('loginError');
+            
+            if (!email || !email.includes('@')) {
+                showError('Por favor, digite um email válido', errorDiv);
+                return;
+            }
+            
+            loginBtn.disabled = true;
+            loginBtn.textContent = 'ENTRANDO...';
+            
+            try {
+                const result = await apiRequest('/api/login', {
+                    method: 'POST',
+                    body: JSON.stringify({ email })
+                });
+                
+                if (result.success) {
+                    currentUser = { email };
+                    document.getElementById('loginScreen').style.display = 'none';
+                    document.getElementById('mainApp').classList.add('active');
+                    document.getElementById('userEmail').textContent = email;
+                    
+                    await loadProducts();
+                } else {
+                    showError(result.message || 'Erro ao fazer login', errorDiv);
+                }
+            } catch (error) {
+                showError('Erro de conexão. Tente novamente.', errorDiv);
+            }
+            
+            loginBtn.disabled = false;
+            loginBtn.textContent = 'ENTRAR';
+        });
+
+        // Load products from API
+        async function loadProducts() {
+            try {
+                const products = await apiRequest('/api/products');
+                allProducts = products;
+                renderProducts();
+            } catch (error) {
+                console.error('Erro ao carregar produtos:', error);
+                showError('Erro ao carregar produtos');
+            }
+        }
+
+        // Render products by categories
+        function renderProducts() {
+            const categories = {
+                'meus_produtos': 'MEUS PRODUTOS',
+                'mais_vendidos': 'MAIS VENDIDOS', 
+                'criadoras_conteudos': 'CRIADORAS DE CONTEÚDOS',
+                'chamadas_video': 'CHAMADAS DE VÍDEO',
+                'para_homens': 'PARA HOMENS',
+                'fetiches': 'FETICHES'
+            };
+
+            const container = document.getElementById('categoriesContainer');
+            container.innerHTML = '';
+
+            Object.entries(categories).forEach(([categoryKey, categoryTitle]) => {
+                const categoryProducts = allProducts.filter(p => p.category === categoryKey);
+                
+                if (categoryProducts.length > 0) {
+                    const categorySection = document.createElement('section');
+                    categorySection.className = 'category-section';
+                    categorySection.innerHTML = `
+                        <h2 class="category-title">${categoryTitle}</h2>
+                        <div class="module-grid" id="${categoryKey}">
+                            ${categoryProducts.map(product => createProductCardHTML(product)).join('')}
+                        </div>
+                    `;
+                    
+                    container.appendChild(categorySection);
+                }
+            });
+
+            // Add click events to cards
+            document.querySelectorAll('.module-card').forEach(card => {
+                card.addEventListener('click', () => {
+                    const productId = parseInt(card.dataset.productId);
+                    const product = allProducts.find(p => p.id === productId);
+                    if (product) openModal(product);
+                });
+            });
+        }
+
+        // Create product card HTML
+        function createProductCardHTML(product) {
+            const isLocked = product.type === 'external';
+            
+            return `
+                <div class="module-card" data-product-id="${product.id}">
+                    <img src="${product.banner_url}" alt="${product.name}" class="module-thumbnail">
+                    ${isLocked ? `
+                        <div class="locked-overlay">
+                            <svg class="lock-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <rect x="3" y="11" width="18" height="11" rx="2" ry="2" stroke="white" stroke-width="2"/>
+                                <path d="M7 11V7C7 5.67392 7.52678 4.40215 8.46447 3.46447C9.40215 2.52678 10.6739 2 12 2C13.3261 2 14.5979 2.52678 15.5355 3.46447C16.4732 4.40215 17 5.67392 17 7V11" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+        }
+
+        // Modal Functions
+        function openModal(product) {
+            const modal = document.getElementById('modalContent');
+            const overlay = document.getElementById('productModal');
+            
+            document.getElementById('modalTitle').textContent = product.name;
+            document.getElementById('modalBanner').src = product.banner_url;
+            document.getElementById('modalDescription').textContent = product.description;
+            
+            const actionsContainer = document.getElementById('modalActions');
+            actionsContainer.innerHTML = '';
+            
+            if (product.type === 'owned') {
+                const accessBtn = document.createElement('button');
+                accessBtn.className = 'btn btn-primary';
+                accessBtn.innerHTML = `
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg> 
+                    Acessar Conteúdo
+                `;
+                accessBtn.onclick = function() {
+                    openContentViewer(product);
+                    closeModal();
+                };
+                actionsContainer.appendChild(accessBtn);
+            } else if (product.buy_url) {
+                const buyBtn = document.createElement('button');
+                buyBtn.className = 'btn btn-primary';
+                buyBtn.innerHTML = `
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg> 
+                    Comprar Agora - R$ ${product.price.toFixed(2)}
+                `;
+                buyBtn.onclick = function() {
+                    window.open(product.buy_url, '_blank');
+                    closeModal();
+                };
+                actionsContainer.appendChild(buyBtn);
+            }
+            
+            overlay.style.display = 'flex';
+            setTimeout(() => {
+                modal.classList.add('active');
+            }, 50);
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('modalContent');
+            const overlay = document.getElementById('productModal');
+            
+            modal.classList.remove('active');
+            setTimeout(() => {
+                overlay.style.display = 'none';
+            }, 400);
+        }
+
+        // Content Viewer Functions
+        function openContentViewer(product) {
+            const viewer = document.getElementById('contentViewer');
+            const title = document.getElementById('contentViewerTitle');
+            const body = document.getElementById('contentViewerBody');
+            
+            title.textContent = product.name;
+            body.innerHTML = '<div class="loader"></div>';
+            
+            viewer.classList.add('active');
+            
+            // Simulate loading and render content
+            setTimeout(() => {
+                renderProductContent(product, body);
+            }, 500);
+        }
+
+        function renderProductContent(product, container) {
+            container.innerHTML = '';
+            
+            if (!product.content || product.content.length === 0) {
+                container.innerHTML = '<p style="color: #999; text-align: center; padding: 2rem;">Este produto ainda não possui conteúdo disponível.</p>';
+                return;
+            }
+            
+            product.content.forEach(content => {
+                const contentDiv = document.createElement('div');
+                contentDiv.className = 'content-item';
+                
+                let contentHTML = `<h3>${content.title}</h3>`;
+                
+                switch(content.type) {
+                    case 'text':
+                        contentHTML += `<p>${content.content}</p>`;
+                        break;
+                    case 'image':
+                        contentHTML += `<img src="${content.url}" alt="${content.title}" onerror="this.style.display='none'" />`;
+                        break;
+                    case 'video':
+                        contentHTML += `<video controls><source src="${content.url}" type="video/mp4">Seu navegador não suporta vídeo.</video>`;
+                        break;
+                    case 'link':
+                        contentHTML += `<a href="${content.url}" target="_blank" class="content-link">${content.linkTitle || 'Acessar Link'}</a>`;
+                        break;
+                }
+                
+                contentDiv.innerHTML = contentHTML;
+                container.appendChild(contentDiv);
+            });
+        }
+
+        function closeContentViewer() {
+            const viewer = document.getElementById('contentViewer');
+            viewer.classList.remove('active');
+        }
+
+        // Logout
+        function handleLogout() {
+            if (confirm('Deseja realmente sair?')) {
+                currentUser = null;
+                location.reload();
+            }
+        }
+
+        // Utility functions
+        function showError(message, container = null) {
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'error-message';
+            errorDiv.textContent = message;
+            
+            if (container) {
+                container.innerHTML = '';
+                container.appendChild(errorDiv);
+            } else {
+                document.body.insertBefore(errorDiv, document.body.firstChild);
+                setTimeout(() => errorDiv.remove(), 5000);
+            }
+        }
+
+        function showSuccess(message, container = null) {
+            const successDiv function showSuccess(message, container = null) {
+           const successDiv = document.createElement('div');
+           successDiv.className = 'success-message';
+           successDiv.textContent = message;
+           
+           if (container) {
+               container.innerHTML = '';
+               container.appendChild(successDiv);
+           } else {
+               document.body.insertBefore(successDiv, document.body.firstChild);
+               setTimeout(() => successDiv.remove(), 3000);
+           }
+       }
+
+       // Close modal when clicking outside
+       window.onclick = function(event) {
+           const modal = document.getElementById('productModal');
+           const contentViewer = document.getElementById('contentViewer');
+           
+           if (event.target === modal) {
+               closeModal();
+           }
+           if (event.target === contentViewer) {
+               closeContentViewer();
+           }
+       };
+
+       // Initialize on page load
+       document.addEventListener('DOMContentLoaded', function() {
+           // App is ready
+           console.log('Área de Membros VIP carregada');
+       });
+   </script>
+</body>
+</html>
