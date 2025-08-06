@@ -1,0 +1,936 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel Administrativo - Membros VIP</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --primary-color: #E50914;
+            --primary-dark: #B81D24;
+            --success-color: #28a745;
+            --danger-color: #dc3545;
+            --warning-color: #ffc107;
+            --dark-bg: #111;
+            --card-bg: #1a1a1a;
+            --text-color: #FFFFFF;
+            --text-secondary: #999999;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Montserrat', sans-serif;
+        }
+
+        body {
+            background: var(--dark-bg);
+            color: var(--text-color);
+            min-height: 100vh;
+        }
+
+        /* Login Screen */
+        .admin-login {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, #000000, #1a1a1a);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+
+        .login-container {
+            background: linear-gradient(145deg, #2a2a2a, #1a1a1a);
+            padding: 3rem 2.5rem;
+            border-radius: 20px;
+            text-align: center;
+            max-width: 400px;
+            width: 90%;
+            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.8);
+            border: 1px solid #333;
+        }
+
+        .admin-icon {
+            width: 80px;
+            height: 80px;
+            background: var(--primary-color);
+            border-radius: 50%;
+            margin: 0 auto 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .login-title {
+            font-size: 1.5rem;
+            margin-bottom: 2rem;
+            color: white;
+            font-weight: 600;
+        }
+
+        .password-input {
+            width: 100%;
+            padding: 1rem 1.5rem;
+            border: 2px solid #333;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            font-size: 1rem;
+            margin-bottom: 1.5rem;
+            transition: all 0.3s ease;
+        }
+
+        .password-input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(229, 9, 20, 0.2);
+        }
+
+        .password-input::placeholder {
+            color: #999;
+        }
+
+        .login-btn {
+            width: 100%;
+            background: linear-gradient(135deg, var(--primary-color), #cc0000);
+            color: white;
+            padding: 1rem 2rem;
+            border: none;
+            border-radius: 12px;
+            font-weight: bold;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .login-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(229, 9, 20, 0.4);
+        }
+
+        .login-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Main Admin Panel */
+        .admin-panel {
+            display: none;
+        }
+
+        .admin-panel.active {
+            display: block;
+        }
+
+        .admin-header {
+            background: #222;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid var(--primary-color);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .admin-title {
+            color: var(--primary-color);
+            font-size: 1.5rem;
+            font-weight: bold;
+            font-family: 'Bebas Neue', sans-serif;
+        }
+
+        .admin-actions {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .btn {
+            padding: 0.8rem 1.5rem;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+            text-align: center;
+        }
+
+        .btn-primary {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark);
+            transform: translateY(-2px);
+        }
+
+        .btn-success {
+            background: var(--success-color);
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #218838;
+            transform: translateY(-2px);
+        }
+
+        .btn-danger {
+            background: var(--danger-color);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #c82333;
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background: #666;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #777;
+            transform: translateY(-2px);
+        }
+
+        .admin-content {
+            padding: 2rem;
+        }
+
+        .admin-section {
+            margin-bottom: 3rem;
+            background: var(--card-bg);
+            border-radius: 8px;
+            padding: 2rem;
+            border: 1px solid #333;
+        }
+
+        .section-title {
+            color: white;
+            margin-bottom: 1.5rem;
+            font-size: 1.3rem;
+            border-bottom: 2px solid var(--primary-color);
+            padding-bottom: 0.5rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            color: #ccc;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+        }
+
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            padding: 0.8rem;
+            border: 1px solid #444;
+            border-radius: 6px;
+            background: #222;
+            color: white;
+            font-size: 1rem;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 2px rgba(229, 9, 20, 0.2);
+        }
+
+        .form-group textarea {
+            min-height: 120px;
+            resize: vertical;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        .file-upload {
+            border: 2px dashed #444;
+            padding: 2rem;
+            text-align: center;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .file-upload:hover {
+            border-color: var(--primary-color);
+            background: rgba(229, 9, 20, 0.1);
+        }
+
+        .file-upload.dragover {
+            border-color: var(--primary-color);
+            background: rgba(229, 9, 20, 0.2);
+        }
+
+        .products-list {
+            max-height: 500px;
+            overflow-y: auto;
+            border: 1px solid #333;
+            border-radius: 6px;
+            background: #222;
+        }
+
+        .product-item {
+            padding: 1rem;
+            border-bottom: 1px solid #333;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .product-item:last-child {
+            border-bottom: none;
+        }
+
+        .product-info {
+            flex: 1;
+        }
+
+        .product-info h4 {
+            color: white;
+            margin-bottom: 0.3rem;
+        }
+
+        .product-info p {
+            color: #999;
+            font-size: 0.9rem;
+        }
+
+        .product-actions {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .product-actions .btn {
+            padding: 0.5rem 1rem;
+            font-size: 0.8rem;
+        }
+
+        .content-management {
+            display: none;
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-top: 2rem;
+        }
+
+        .content-management.active {
+            display: block;
+        }
+
+        .content-list {
+            margin-top: 1.5rem;
+        }
+
+        .content-item {
+            background: #222;
+            border: 1px solid #333;
+            border-radius: 6px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .message {
+            padding: 1rem;
+            border-radius: 6px;
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+
+        .message.success {
+            background: rgba(40, 167, 69, 0.2);
+            border: 1px solid var(--success-color);
+            color: var(--success-color);
+        }
+
+        .message.error {
+            background: rgba(220, 53, 69, 0.2);
+            border: 1px solid var(--danger-color);
+            color: var(--danger-color);
+        }
+
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid var(--primary-color);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 2s linear infinite;
+            margin: 20px auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 768px) {
+            .admin-content {
+                padding: 1rem;
+            }
+            
+            .admin-section {
+                padding: 1.5rem;
+            }
+
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+
+            .product-actions {
+                flex-direction: column;
+                align-items: stretch;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Admin Login -->
+    <div class="admin-login" id="adminLogin">
+        <div class="login-container">
+            <div class="admin-icon">
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="white">
+                    <path d="M12 15.5A3.5 3.5 0 0 1 8.5 12A3.5 3.5 0 0 1 12 8.5a3.5 3.5 0 0 1 3.5 3.5 3.5 3.5 0 0 1-3.5 3.5m7.43-2.53c.04-.32.07-.64.07-.97c0-.33-.03-.66-.07-1l2.11-1.63c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.31-.61-.22l-2.49 1c-.52-.4-1.06-.73-1.69-.98l-.37-2.65A.506.506 0 0 0 14 2h-4c-.25 0-.46.18-.5.42l-.37 2.65c-.63.25-1.17.59-1.69.98l-2.49-1c-.22-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64L4.57 11c-.04.34-.07.67-.07 1c0 .33.03.65.07.97l-2.11 1.66c-.19.15-.25.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1.01c.52.4 1.06.74 1.69.99l.37 2.65c.04.24.25.42.5.42h4c.25 0 .46-.18.5-.42l.37-2.65c.63-.26 1.17-.59 1.69-.99l2.49 1.01c.22.08.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.66Z"/>
+                </svg>
+            </div>
+            <h2 class="login-title">Painel Administrativo</h2>
+            <div id="loginMessage"></div>
+            <form id="adminLoginForm">
+                <input 
+                    type="password" 
+                    class="password-input" 
+                    id="passwordInput" 
+                    placeholder="Digite a senha de administrador"
+                    required
+                >
+                <button type="submit" class="login-btn" id="adminLoginBtn">
+                    ACESSAR PAINEL
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Main Admin Panel -->
+    <div class="admin-panel" id="adminPanel">
+        <div class="admin-header">
+            <h1 class="admin-title">PAINEL ADMINISTRATIVO</h1>
+            <div class="admin-actions">
+                <a href="/" class="btn btn-secondary" target="_blank">Ver Site</a>
+                <button class="btn btn-danger" onclick="handleLogout()">Sair</button>
+            </div>
+        </div>
+
+        <div class="admin-content">
+            <div id="messageContainer"></div>
+
+            <!-- Add Product Section -->
+            <div class="admin-section">
+                <h3 class="section-title">Adicionar Novo Produto</h3>
+                <form id="addProductForm">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="productName">Nome do Produto *</label>
+                            <input type="text" id="productName" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="productCategory">Categoria *</label>
+                            <select id="productCategory" required>
+                                <option value="">Selecione uma categoria</option>
+                                <option value="meus_produtos">Meus Produtos</option>
+                                <option value="mais_vendidos">Mais Vendidos</option>
+                                <option value="criadoras_conteudos">Criadoras de Conteúdos</option>
+                                <option value="chamadas_video">Chamadas de Vídeo</option>
+                                <option value="para_homens">Para Homens</option>
+                                <option value="fetiches">Fetiches</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="productDescription">Descrição *</label>
+                        <textarea id="productDescription" required></textarea>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="productPrice">Preço (R$)</label>
+                            <input type="number" id="productPrice" step="0.01" min="0" placeholder="0.00">
+                        </div>
+                        <div class="form-group">
+                            <label for="productType">Tipo de Produto *</label>
+                            <select id="productType" required>
+                                <option value="">Selecione o tipo</option>
+                                <option value="owned">Produto Próprio (com conteúdo interno)</option>
+                                <option value="external">Produto Externo (link de compra)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="productBanner">URL da Imagem (Banner)</label>
+                        <input type="url" id="productBannerUrl" placeholder="https://exemplo.com/imagem.jpg">
+                    </div>
+
+                    <div class="form-group" id="externalLinkGroup" style="display: none;">
+                        <label for="productBuyUrl">Link de Compra Externa *</label>
+                        <input type="url" id="productBuyUrl" placeholder="https://exemplo.com/comprar">
+                    </div>
+
+                    <button type="submit" class="btn btn-success">Adicionar Produto</button>
+                </form>
+            </div>
+
+            <!-- Content Management Section -->
+            <div class="content-management" id="contentManagement">
+                <h4>Gerenciar Conteúdo: <span id="currentProductName"></span></h4>
+                
+                <form id="addContentForm">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="contentTitle">Título do Conteúdo *</label>
+                            <input type="text" id="contentTitle" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="contentType">Tipo de Conteúdo *</label>
+                            <select id="contentType" required>
+                                <option value="">Selecione o tipo</option>
+                                <option value="text">Texto</option>
+                                <option value="image">Imagem</option>
+                                <option value="video">Vídeo</option>
+                                <option value="link">Link</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group" id="textContentGroup" style="display: none;">
+                        <label for="textContent">Conteúdo de Texto *</label>
+                        <textarea id="textContent"></textarea>
+                    </div>
+
+                    <div class="form-group" id="mediaUrlGroup" style="display: none;">
+                        <label for="mediaUrl">URL da Mídia</label>
+                        <input type="url" id="mediaUrl" placeholder="https://exemplo.com/video.mp4">
+                    </div>
+
+                    <div class="form-row" id="linkContentGroup" style="display: none;">
+                        <div class="form-group">
+                            <label for="linkUrl">URL do Link *</label>
+                            <input type="url" id="linkUrl" placeholder="https://exemplo.com">
+                        </div>
+                        <div class="form-group">
+                            <label for="linkTitle">Título do Botão</label>
+                            <input type="text" id="linkTitle" placeholder="Acessar Link">
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 1rem;">
+                        <button type="submit" class="btn btn-primary">Adicionar Conteúdo</button>
+                        <button type="button" class="btn btn-secondary" onclick="closeContentManagement()">Voltar</button>
+                    </div>
+                </form>
+
+                <div class="content-list" id="contentList">
+                    <!-- Content items will be loaded here -->
+                </div>
+            </div>
+
+            <!-- Products List Section -->
+            <div class="admin-section">
+                <h3 class="section-title">Produtos Cadastrados</h3>
+                <div class="products-list" id="productsList">
+                    <div class="loader"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let isAdmin = false;
+        let allProducts = [];
+        let currentEditingProduct = null;
+
+        // API functions
+        async function apiRequest(url, options = {}) {
+            try {
+                const response = await fetch(url, {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...options.headers
+                    },
+                    ...options
+                });
+                
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.error || `HTTP error! status: ${response.status}`);
+                }
+                
+                return data;
+            } catch (error) {
+                console.error('API Error:', error);
+                throw error;
+            }
+        }
+
+        // Admin Login
+        document.getElementById('adminLoginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const password = document.getElementById('passwordInput').value;
+            const loginBtn = document.getElementById('adminLoginBtn');
+            const messageDiv = document.getElementById('loginMessage');
+            
+            loginBtn.disabled = true;
+            loginBtn.textContent = 'VERIFICANDO...';
+            
+            try {
+                const result = await apiRequest('/api/admin/login', {
+                    method: 'POST',
+                    body: JSON.stringify({ password })
+                });
+                
+                if (result.success) {
+                    isAdmin = true;
+                    document.getElementById('adminLogin').style.display = 'none';
+                    document.getElementById('adminPanel').classList.add('active');
+                    await loadProducts();
+                } else {
+                    showMessage(result.message || 'Senha incorreta', 'error', messageDiv);
+                }
+            } catch (error) {
+                showMessage('Erro de conexão. Tente novamente.', 'error', messageDiv);
+            }
+            
+            loginBtn.disabled = false;
+            loginBtn.textContent = 'ACESSAR PAINEL';
+        });
+
+        // Check if already logged in as admin
+        async function checkAdminStatus() {
+            try {
+                const result = await apiRequest('/api/admin/check');
+                if (result.isAdmin) {
+                    isAdmin = true;
+                    document.getElementById('adminLogin').style.display = 'none';
+                    document.getElementById('adminPanel').classList.add('active');
+                    await loadProducts();
+                }
+            } catch (error) {
+                console.log('Not logged in as admin');
+            }
+        }
+
+        // Load products
+        async function loadProducts() {
+            try {
+                const products = await apiRequest('/api/products');
+                allProducts = products;
+                renderProductsList();
+            } catch (error) {
+                showMessage('Erro ao carregar produtos: ' + error.message, 'error');
+            }
+        }
+
+        // Render products list
+        function renderProductsList() {
+            const container = document.getElementById('productsList');
+            
+            if (allProducts.length === 0) {
+                container.innerHTML = '<p style="text-align: center; color: #999; padding: 2rem;">Nenhum produto cadastrado ainda.</p>';
+                return;
+            }
+            
+            container.innerHTML = allProducts.map(product => `
+                <div class="product-item">
+                    <div class="product-info">
+                        <h4>${product.name}</h4>
+                        <p>${getCategoryName(product.category)} • ${product.type === 'owned' ? 'Próprio' : 'Externo'} • R$ ${product.price.toFixed(2)}</p>
+                    </div>
+                    <div class="product-actions">
+                        ${product.type === 'owned' ? `<button class="btn btn-primary" onclick="editProductContent(${product.id})">Gerenciar Conteúdo</button>` : ''}
+                        <button class="btn btn-danger" onclick="deleteProduct(${product.id})">Excluir</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Get category display name
+        function getCategoryName(category) {
+            const categories = {
+                'meus_produtos': 'Meus Produtos',
+                'mais_vendidos': 'Mais Vendidos',
+                'criadoras_conteudos': 'Criadoras de Conteúdos',
+                'chamadas_video': 'Chamadas de Vídeo',
+                'para_homens': 'Para Homens',
+                'fetiches': 'Fetiches'
+            };
+            return categories[category] || category;
+        }
+
+        // Product type change handler
+        document.getElementById('productType').addEventListener('change', function() {
+            const externalGroup = document.getElementById('externalLinkGroup');
+            const buyUrlInput = document.getElementById('productBuyUrl');
+            
+            if (this.value === 'external') {
+                externalGroup.style.display = 'block';
+                buyUrlInput.required = true;
+            } else {
+                externalGroup.style.display = 'none';
+                buyUrlInput.required = false;
+            }
+        });
+
+        // Content type change handler
+        document.getElementById('contentType').addEventListener('change', function() {
+            const textGroup = document.getElementById('textContentGroup');
+            const mediaGroup = document.getElementById('mediaUrlGroup');
+            const linkGroup = document.getElementById('linkContentGroup');
+            
+            // Hide all groups
+            [textGroup, mediaGroup, linkGroup].forEach(group => {
+                group.style.display = 'none';
+            });
+            
+            // Show appropriate group
+            switch(this.value) {
+                case 'text':
+                    textGroup.style.display = 'block';
+                    break;
+                case 'image':
+                case 'video':
+                    mediaGroup.style.display = 'block';
+                    break;
+                case 'link':
+                    linkGroup.style.display = 'block';
+                    break;
+            }
+        });
+
+        // Add product form handler
+        document.getElementById('addProductForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = {
+                name: document.getElementById('productName').value,
+                description: document.getElementById('productDescription').value,
+                category: document.getElementById('productCategory').value,
+                banner_url: document.getElementById('productBannerUrl').value,
+                price: parseFloat(document.getElementById('productPrice').value) || 0,
+                type: document.getElementById('productType').value,
+                buy_url: document.getElementById('productBuyUrl').value || undefined
+            };
+            
+            try {
+                showMessage('Adicionando produto...', 'info');
+                const result = await apiRequest('/api/admin/products', {
+                    method: 'POST',
+                    body: JSON.stringify(formData)
+                });
+                
+                showMessage('Produto adicionado com sucesso!', 'success');
+                document.getElementById('addProductForm').reset();
+                await loadProducts();
+            } catch (error) {
+                showMessage('Erro ao adicionar produto: ' + error.message, 'error');
+            }
+        });
+
+        // Edit product content
+        function editProductContent(productId) {
+            const product = allProducts.find(p => p.id === productId);
+            if (!product || product.type !== 'owned') return;
+            
+            currentEditingProduct = productId;
+            document.getElementById('currentProductName').textContent = product.name;
+            document.getElementById('contentManagement').classList.add('active');
+            
+            loadContentList();
+        }
+
+        // Load content list
+        function loadContentList() {
+            const product = allProducts.find(p => p.id === currentEditingProduct);
+            const container = document.getElementById('contentList');
+            
+            if (!product || !product.content || product.content.length === 0) {
+                container.innerHTML = '<p style="color: #999; text-align: center; margin-top: 2rem;">Nenhum conteúdo adicionado ainda.</p>';
+                return;
+            }
+            
+            container.innerHTML = `
+                <h5 style="color: white; margin-top: 2rem; margin-bottom: 1rem;">Conteúdos Existentes:</h5>
+                ${product.content.map(content => `
+                    <div class="content-item">
+                        <div>
+                            <strong>${content.title}</strong>
+                            <br><small style="color: #999;">${content.type}</small>
+                        </div>
+                        <button class="btn btn-danger" onclick="deleteContent(${content.id})">Excluir</button>
+                    </div>
+                `).join('')}
+            `;
+        }
+
+        // Close content management
+        function closeContentManagement() {
+            document.getElementById('contentManagement').classList.remove('active');
+            currentEditingProduct = null;
+        }
+
+        // Add content form handler
+        document.getElementById('addContentForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            if (!currentEditingProduct) return;
+            
+            const contentType = document.getElementById('contentType').value;
+            let contentData = {
+                title: document.getElementById('contentTitle').value,
+                type: contentType
+            };
+            
+            switch(contentType) {
+                case 'text':
+                    contentData.content = document.getElementById('textContent').value;
+                    break;
+                case 'image':
+                case 'video':
+                    contentData.url = document.getElementById('mediaUrl').value;
+                    break;
+                case 'link':
+                    contentData.url = document.getElementById('linkUrl').value;
+                    contentData.linkTitle = document.getElementById('linkTitle').value;
+                    break;
+            }
+            
+            try {
+                showMessage('Adicionando conteúdo...', 'info');
+                await apiRequest(`/api/admin/products/${currentEditingProduct}/content`, {
+                    method: 'POST',
+                    body: JSON.stringify(contentData)
+                });
+                
+                showMessage('Conteúdo adicionado com sucesso!', 'success');
+                document.getElementById('addContentForm').reset();
+                await loadProducts();
+                loadContentList loadContentList();
+           } catch (error) {
+               showMessage('Erro ao adicionar conteúdo: ' + error.message, 'error');
+           }
+       });
+
+       // Delete product
+       async function deleteProduct(productId) {
+           if (!confirm('Tem certeza que deseja excluir este produto? Esta ação não pode ser desfeita.')) return;
+           
+           try {
+               showMessage('Excluindo produto...', 'info');
+               await apiRequest(`/api/admin/products/${productId}`, {
+                   method: 'DELETE'
+               });
+               
+               showMessage('Produto excluído com sucesso!', 'success');
+               await loadProducts();
+           } catch (error) {
+               showMessage('Erro ao excluir produto: ' + error.message, 'error');
+           }
+       }
+
+       // Delete content
+       async function deleteContent(contentId) {
+           if (!confirm('Tem certeza que deseja excluir este conteúdo?')) return;
+           
+           try {
+               showMessage('Excluindo conteúdo...', 'info');
+               await apiRequest(`/api/admin/products/${currentEditingProduct}/content/${contentId}`, {
+                   method: 'DELETE'
+               });
+               
+               showMessage('Conteúdo excluído com sucesso!', 'success');
+               await loadProducts();
+               loadContentList();
+           } catch (error) {
+               showMessage('Erro ao excluir conteúdo: ' + error.message, 'error');
+           }
+       }
+
+       // Logout
+       async function handleLogout() {
+           if (!confirm('Deseja realmente sair do painel administrativo?')) return;
+           
+           try {
+               await apiRequest('/api/admin/logout', { method: 'POST' });
+               location.reload();
+           } catch (error) {
+               location.reload();
+           }
+       }
+
+       // Message system
+       function showMessage(message, type = 'info', container = null) {
+           const messageDiv = document.createElement('div');
+           messageDiv.className = `message ${type}`;
+           messageDiv.textContent = message;
+           
+           const targetContainer = container || document.getElementById('messageContainer');
+           
+           // Remove existing messages
+           const existingMessages = targetContainer.querySelectorAll('.message');
+           existingMessages.forEach(msg => msg.remove());
+           
+           targetContainer.appendChild(messageDiv);
+           
+           // Auto remove success messages
+           if (type === 'success' || type === 'info') {
+               setTimeout(() => {
+                   if (messageDiv.parentNode) {
+                       messageDiv.remove();
+                   }
+               }, 3000);
+           }
+       }
+
+       // Initialize
+       document.addEventListener('DOMContentLoaded', () => {
+           checkAdminStatus();
+       });
+   </script>
+</body>
+</html>
