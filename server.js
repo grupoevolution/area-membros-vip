@@ -38,7 +38,7 @@ db.serialize(() => {
             main_video TEXT,
             access_url TEXT,
             buy_url TEXT,
-            price REAL,
+            price REAL DEFAULT 0,
             category TEXT DEFAULT 'meus_produtos',
             plano_1 TEXT,
             plano_2 TEXT,
@@ -73,64 +73,6 @@ db.serialize(() => {
             payment_id TEXT,
             status TEXT DEFAULT 'active',
             expires_at DATETIME,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        )
-    `);
-
-    // Videos table
-    db.run(`
-        CREATE TABLE IF NOT EXISTS videos (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            title TEXT NOT NULL,
-            description TEXT,
-            thumbnail_url TEXT,
-            video_url TEXT,
-            duration TEXT,
-            category TEXT DEFAULT 'todos',
-            views INTEGER DEFAULT 0,
-            is_premium BOOLEAN DEFAULT 0,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        )
-    `);
-
-    // Lives/Models table
-    db.run(`
-        CREATE TABLE IF NOT EXISTS models (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            description TEXT,
-            image_url TEXT,
-            stream_url TEXT,
-            category TEXT DEFAULT 'todos',
-            is_online BOOLEAN DEFAULT 1,
-            is_premium BOOLEAN DEFAULT 0,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        )
-    `);
-
-    // Encontros/Profiles table
-    db.run(`
-        CREATE TABLE IF NOT EXISTS profiles (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            age INTEGER,
-            description TEXT,
-            image_url TEXT,
-            city TEXT,
-            state TEXT,
-            whatsapp_url TEXT,
-            category TEXT DEFAULT 'todos',
-            is_premium BOOLEAN DEFAULT 0,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        )
-    `);
-
-    // Admin users table
-    db.run(`
-        CREATE TABLE IF NOT EXISTS admin_users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT UNIQUE NOT NULL,
-            password TEXT NOT NULL,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )
     `);
@@ -291,14 +233,12 @@ app.get('/api/products/:id', (req, res) => {
 });
 
 // Create new product
-app.post('/api/products', upload.fields([
-    { name: 'banner', maxCount: 1 },
-    { name: 'main_video', maxCount: 1 },
-    { name: 'gallery', maxCount: 10 }
-]), (req, res) => {
+app.post('/api/products', (req, res) => {
     const { 
         name, 
         description, 
+        banner_url,
+        main_video,
         access_url, 
         buy_url, 
         price, 
@@ -312,17 +252,6 @@ app.post('/api/products', upload.fields([
         return res.status(400).json({ success: false, error: 'Nome é obrigatório' });
     }
     
-    let banner_url = null;
-    let main_video = null;
-    
-    if (req.files.banner) {
-        banner_url = `/uploads/${req.files.banner[0].filename}`;
-    }
-    
-    if (req.files.main_video) {
-        main_video = `/uploads/${req.files.main_video[0].filename}`;
-    }
-    
     const query = `
         INSERT INTO products (name, description, banner_url, main_video, access_url, buy_url, price, category, plano_1, plano_2, plano_3)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -331,11 +260,11 @@ app.post('/api/products', upload.fields([
     db.run(query, [
         name, 
         description, 
-        banner_url, 
-        main_video, 
-        access_url, 
-        buy_url, 
-        price, 
+        banner_url || null,
+        main_video || null,
+        access_url || null,
+        buy_url || null,
+        parseFloat(price) || 0,
         category || 'meus_produtos',
         plano_1 || null,
         plano_2 || null,
@@ -346,92 +275,7 @@ app.post('/api/products', upload.fields([
             return res.status(500).json({ success: false, error: 'Erro ao criar produto' });
         }
         
-        const productId = this.lastID;
-        
-        // Add gallery items
-        if (req.files.gallery) {
-            req.files.gallery.forEach((file, index) => {
-                const isVideo = /\.(mp4|mov|avi|webm)$/i.test(file.originalname);
-                const type = isVideo ? 'video' : 'image';
-                const url = `/uploads/${file.filename}`;
-                
-                db.run(`
-                    INSERT INTO product_media (product_id, type, url, order_index)
-                    VALUES (?, ?, ?, ?)
-                `, [productId, type, url, index]);
-            });
-        }
-        
-        res.json({ success: true, productId, message: 'Produto criado com sucesso!' });
-    });
-});
-
-// Update product
-app.put('/api/products/:id', upload.fields([
-    { name: 'banner', maxCount: 1 },
-    { name: 'main_video', maxCount: 1 },
-    { name: 'gallery', maxCount: 10 }
-]), (req, res) => {
-    const productId = req.params.id;
-    const { name, description, access_url, buy_url, price, category, plano_1, plano_2, plano_3 } = req.body;
-    
-    if (!name) {
-        return res.status(400).json({ success: false, error: 'Nome é obrigatório' });
-    }
-    
-    // Get current product to preserve existing files if not updated
-    db.get('SELECT * FROM products WHERE id = ?', [productId], (err, currentProduct) => {
-        if (err || !currentProduct) {
-            return res.status(404).json({ success: false, error: 'Produto não encontrado' });
-        }
-        
-        let banner_url = currentProduct.banner_url;
-        let main_video = currentProduct.main_video;
-        
-        if (req.files.banner) {
-            banner_url = `/uploads/${req.files.banner[0].filename}`;
-        }
-        
-        if (req.files.main_video) {
-            main_video = `/uploads/${req.files.main_video[0].filename}`;
-        }
-        
-        const query = `
-            UPDATE products 
-            SET name = ?, description = ?, banner_url = ?, main_video = ?, 
-                access_url = ?, buy_url = ?, price = ?, category = ?, 
-                plano_1 = ?, plano_2 = ?, plano_3 = ?, updated_at = CURRENT_TIMESTAMP
-            WHERE id = ?
-        `;
-        
-        db.run(query, [name, description, banner_url, main_video, access_url, buy_url, price, category, plano_1, plano_2, plano_3, productId], function(err) {
-            if (err) {
-                console.error(err);
-                return res.status(500).json({ success: false, error: 'Erro ao atualizar produto' });
-            }
-            
-            // Update gallery if new files provided
-            if (req.files.gallery) {
-                // Delete existing gallery
-                db.run('DELETE FROM product_media WHERE product_id = ?', [productId], (err) => {
-                    if (!err) {
-                        // Add new gallery items
-                        req.files.gallery.forEach((file, index) => {
-                            const isVideo = /\.(mp4|mov|avi|webm)$/i.test(file.originalname);
-                            const type = isVideo ? 'video' : 'image';
-                            const url = `/uploads/${file.filename}`;
-                            
-                            db.run(`
-                                INSERT INTO product_media (product_id, type, url, order_index)
-                                VALUES (?, ?, ?, ?)
-                            `, [productId, type, url, index]);
-                        });
-                    }
-                });
-            }
-            
-            res.json({ success: true, message: 'Produto atualizado com sucesso!' });
-        });
+        res.json({ success: true, productId: this.lastID, message: 'Produto criado com sucesso!' });
     });
 });
 
@@ -447,330 +291,10 @@ app.delete('/api/products/:id', (req, res) => {
         }
         
         if (this.changes === 0) {
-            return res.status(404).json({ success: false, error: 'Acesso não encontrado' });
-        }
-        
-        res.json({ success: true, message: 'Acesso revogado com sucesso' });
-    });
-});
-
-// =============================================================================
-// API ROUTES - ADMIN AUTH
-// =============================================================================
-
-// Simple admin login with new credentials
-app.post('/api/admin/login', (req, res) => {
-    const { username, password } = req.body;
-    
-    // New secure credentials
-    if (username === 'painel-iago' && password === '#Senha8203') {
-        res.json({ success: true, message: 'Login realizado com sucesso!' });
-    } else {
-        res.status(401).json({ success: false, error: 'Credenciais inválidas' });
-    }
-});
-
-// =============================================================================
-// STATIC FILES & PWA
-// =============================================================================
-
-// Serve manifest.json
-app.get('/manifest.json', (req, res) => {
-    const manifest = {
-        "name": "Membros VIP",
-        "short_name": "VIP App",
-        "description": "Área de Membros VIP - Acesso Exclusivo",
-        "start_url": "/",
-        "display": "standalone",
-        "background_color": "#000000",
-        "theme_color": "#E50914",
-        "icons": [
-            {
-                "src": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTI4IiBoZWlnaHQ9IjEyOCIgdmlld0JveD0iMCAwIDEyOCAxMjgiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CiAgPHJlY3Qgd2lkdGg9IjEyOCIgaGVpZ2h0PSIxMjgiIGZpbGw9IiNFNTA5MTQiLz4KICA8dGV4dCB4PSI2NCIgeT0iNjgiIGZpbGw9IndoaXRlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmb250LXNpemU9IjIwIiBmb250LXdlaWdodD0iYm9sZCI+VklQPC90ZXh0Pgo8L3N2Zz4=",
-                "type": "image/svg+xml",
-                "sizes": "128x128"
-            }
-        ]
-    };
-    
-    res.json(manifest);
-});
-
-// Service Worker
-app.get('/sw.js', (req, res) => {
-    const swContent = `
-        const CACHE_NAME = 'vip-app-v1';
-        const urlsToCache = [
-            '/',
-            '/manifest.json'
-        ];
-
-        self.addEventListener('install', event => {
-            event.waitUntil(
-                caches.open(CACHE_NAME)
-                    .then(cache => cache.addAll(urlsToCache))
-            );
-        });
-
-        self.addEventListener('fetch', event => {
-            event.respondWith(
-                caches.match(event.request)
-                    .then(response => {
-                        if (response) {
-                            return response;
-                        }
-                        return fetch(event.request);
-                    })
-            );
-        });
-    `;
-    
-    res.setHeader('Content-Type', 'application/javascript');
-    res.send(swContent);
-});
-
-// Serve admin panel with secure URL
-app.get('/painel-x7k2m9', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'admin.html'));
-});
-
-// Serve main app
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
-
-// =============================================================================
-// ERROR HANDLING
-// =============================================================================
-app.use((error, req, res, next) => {
-    if (error instanceof multer.MulterError) {
-        if (error.code === 'LIMIT_FILE_SIZE') {
-            return res.status(400).json({ success: false, error: 'Arquivo muito grande. Máximo 100MB.' });
-        }
-    }
-    
-    console.error(error);
-    res.status(500).json({ success: false, error: 'Erro interno do servidor' });
-});
-
-// =============================================================================
-// START SERVER
-// =============================================================================
-app.listen(PORT, () => {
-    console.log(`🚀 Servidor rodando na porta ${PORT}`);
-    console.log(`📱 App principal: http://localhost:${PORT}`);
-    console.log(`⚙️  Painel admin: http://localhost:${PORT}/painel-x7k2m9`);
-    console.log(`📊 API: http://localhost:${PORT}/api/products`);
-    console.log(`🔌 Webhook: http://localhost:${PORT}/webhook/perfectpay`);
-});
-
-// Graceful shutdown
-process.on('SIGINT', () => {
-    console.log('\n👋 Fechando servidor...');
-    db.close((err) => {
-        if (err) {
-            console.error(err.message);
-        }
-        console.log('✅ Banco de dados fechado.');
-        process.exit(0);
-    });
-});Produto não encontrado' });
+            return res.status(404).json({ success: false, error: 'Produto não encontrado' });
         }
         
         res.json({ success: true, message: 'Produto deletado com sucesso!' });
-    });
-});
-
-// =============================================================================
-// API ROUTES - VIDEOS
-// =============================================================================
-
-// Get all videos
-app.get('/api/videos', (req, res) => {
-    const { category, search } = req.query;
-    
-    let query = 'SELECT * FROM videos WHERE 1=1';
-    const params = [];
-    
-    if (category && category !== 'all') {
-        query += ' AND category = ?';
-        params.push(category);
-    }
-    
-    if (search) {
-        query += ' AND (title LIKE ? OR description LIKE ?)';
-        params.push(`%${search}%`, `%${search}%`);
-    }
-    
-    query += ' ORDER BY created_at DESC';
-    
-    db.all(query, params, (err, rows) => {
-        if (err) {
-            console.error(err);
-            return res.status(500).json({ success: false, error: 'Erro interno do servidor' });
-        }
-        
-        res.json({ success: true, videos: rows });
-    });
-});
-
-// Create video
-app.post('/api/videos', upload.fields([
-    { name: 'thumbnail', maxCount: 1 },
-    { name: 'video', maxCount: 1 }
-]), (req, res) => {
-    const { title, description, category, duration, is_premium } = req.body;
-    
-    let thumbnail_url = null;
-    let video_url = null;
-    
-    if (req.files.thumbnail) {
-        thumbnail_url = `/uploads/${req.files.thumbnail[0].filename}`;
-    }
-    
-    if (req.files.video) {
-        video_url = `/uploads/${req.files.video[0].filename}`;
-    }
-    
-    const query = `
-        INSERT INTO videos (title, description, thumbnail_url, video_url, category, duration, is_premium)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-    `;
-    
-    db.run(query, [title, description, thumbnail_url, video_url, category || 'todos', duration, is_premium || 0], function(err) {
-        if (err) {
-            console.error(err);
-            return res.status(500).json({ success: false, error: 'Erro ao criar vídeo' });
-        }
-        
-        res.json({ success: true, videoId: this.lastID, message: 'Vídeo criado com sucesso!' });
-    });
-});
-
-// Delete video
-app.delete('/api/videos/:id', (req, res) => {
-    const videoId = req.params.id;
-    
-    db.run('DELETE FROM videos WHERE id = ?', [videoId], function(err) {
-        if (err) {
-            console.error(err);
-            return res.status(500).json({ success: false, error: 'Erro ao deletar vídeo' });
-        }
-        
-        if (this.changes === 0) {
-            return res.status(404).json({ success: false, error: 'Vídeo não encontrado' });
-        }
-        
-        res.json({ success: true, message: 'Vídeo deletado com sucesso!' });
-    });
-});
-
-// =============================================================================
-// API ROUTES - LIVES/MODELS
-// =============================================================================
-
-// Get all models
-app.get('/api/models', (req, res) => {
-    const { category } = req.query;
-    
-    let query = 'SELECT * FROM models WHERE 1=1';
-    const params = [];
-    
-    if (category && category !== 'all') {
-        query += ' AND category = ?';
-        params.push(category);
-    }
-    
-    query += ' ORDER BY is_online DESC, created_at DESC';
-    
-    db.all(query, params, (err, rows) => {
-        if (err) {
-            console.error(err);
-            return res.status(500).json({ success: false, error: 'Erro interno do servidor' });
-        }
-        
-        res.json({ success: true, models: rows });
-    });
-});
-
-// Create model
-app.post('/api/models', upload.single('image'), (req, res) => {
-    const { name, description, stream_url, category, is_online, is_premium } = req.body;
-    
-    let image_url = null;
-    if (req.file) {
-        image_url = `/uploads/${req.file.filename}`;
-    }
-    
-    const query = `
-        INSERT INTO models (name, description, image_url, stream_url, category, is_online, is_premium)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-    `;
-    
-    db.run(query, [name, description, image_url, stream_url, category || 'todos', is_online || 1, is_premium || 0], function(err) {
-        if (err) {
-            console.error(err);
-            return res.status(500).json({ success: false, error: 'Erro ao criar modelo' });
-        }
-        
-        res.json({ success: true, modelId: this.lastID, message: 'Modelo criado com sucesso!' });
-    });
-});
-
-// =============================================================================
-// API ROUTES - ENCONTROS/PROFILES
-// =============================================================================
-
-// Get all profiles
-app.get('/api/profiles', (req, res) => {
-    const { category, city } = req.query;
-    
-    let query = 'SELECT * FROM profiles WHERE 1=1';
-    const params = [];
-    
-    if (category && category !== 'all') {
-        query += ' AND category = ?';
-        params.push(category);
-    }
-    
-    if (city) {
-        query += ' AND city LIKE ?';
-        params.push(`%${city}%`);
-    }
-    
-    query += ' ORDER BY created_at DESC';
-    
-    db.all(query, params, (err, rows) => {
-        if (err) {
-            console.error(err);
-            return res.status(500).json({ success: false, error: 'Erro interno do servidor' });
-        }
-        
-        res.json({ success: true, profiles: rows });
-    });
-});
-
-// Create profile
-app.post('/api/profiles', upload.single('image'), (req, res) => {
-    const { name, age, description, city, state, whatsapp_url, category, is_premium } = req.body;
-    
-    let image_url = null;
-    if (req.file) {
-        image_url = `/uploads/${req.file.filename}`;
-    }
-    
-    const query = `
-        INSERT INTO profiles (name, age, description, image_url, city, state, whatsapp_url, category, is_premium)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `;
-    
-    db.run(query, [name, age, description, image_url, city, state, whatsapp_url, category || 'todos', is_premium || 0], function(err) {
-        if (err) {
-            console.error(err);
-            return res.status(500).json({ success: false, error: 'Erro ao criar perfil' });
-        }
-        
-        res.json({ success: true, profileId: this.lastID, message: 'Perfil criado com sucesso!' });
     });
 });
 
@@ -823,7 +347,7 @@ app.post('/webhook/perfectpay', express.json(), (req, res) => {
                 return res.status(500).json({ success: false, error: 'Erro interno' });
             }
             
-            const product_code = product_row?.codigo_produto || plan_code;
+            const product_code = product_row?.id || plan_code;
             
             // Liberar acesso
             const insertQuery = `
@@ -902,46 +426,6 @@ app.post('/api/check-access', (req, res) => {
     });
 });
 
-// Listar acessos de um usuário
-app.get('/api/user-access/:email', (req, res) => {
-    const email = req.params.email;
-    
-    const query = `
-        SELECT ua.*, p.name as product_name, p.description as product_description
-        FROM user_access ua
-        LEFT JOIN products p ON (p.plano_1 = ua.plan_code OR p.plano_2 = ua.plan_code OR p.plano_3 = ua.plan_code)
-        WHERE ua.email = ? AND ua.status = 'active'
-        ORDER BY ua.created_at DESC
-    `;
-    
-    db.all(query, [email], (err, rows) => {
-        if (err) {
-            console.error('Erro ao buscar acessos:', err);
-            return res.status(500).json({ success: false, error: 'Erro interno' });
-        }
-        
-        res.json({ success: true, access: rows });
-    });
-});
-
-// Revogar acesso
-app.delete('/api/revoke-access/:id', (req, res) => {
-    const accessId = req.params.id;
-    
-    db.run('UPDATE user_access SET status = "revoked" WHERE id = ?', [accessId], function(err) {
-        if (err) {
-            console.error('Erro ao revogar acesso:', err);
-            return res.status(500).json({ success: false, error: 'Erro interno' });
-        }
-        
-       if (this.changes === 0) {
-            return res.status(404).json({ success: false, error: 'Acesso não encontrado' });
-        }
-        
-        res.json({ success: true, message: 'Acesso revogado com sucesso' });
-    });
-});
-
 // =============================================================================
 // API ROUTES - ADMIN AUTH
 // =============================================================================
@@ -1019,12 +503,78 @@ app.get('/sw.js', (req, res) => {
 
 // Serve admin panel with secure URL
 app.get('/painel-x7k2m9', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'admin.html'));
+    try {
+        const adminPath = path.join(__dirname, 'public', 'admin.html');
+        
+        // Check if file exists
+        if (fs.existsSync(adminPath)) {
+            res.sendFile(adminPath);
+        } else {
+            // If admin.html doesn't exist, send a basic response
+            res.send(`
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>Admin - Em Manutenção</title>
+                    <style>
+                        body { 
+                            background: #111; 
+                            color: white; 
+                            font-family: Arial; 
+                            text-align: center; 
+                            padding: 50px; 
+                        }
+                    </style>
+                </head>
+                <body>
+                    <h1>Painel em Manutenção</h1>
+                    <p>O arquivo admin.html não foi encontrado.</p>
+                    <p>Certifique-se de que o arquivo está em: public/admin.html</p>
+                </body>
+                </html>
+            `);
+        }
+    } catch (error) {
+        console.error('Erro ao servir admin:', error);
+        res.status(500).send('Erro interno');
+    }
 });
 
 // Serve main app
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+    try {
+        const indexPath = path.join(__dirname, 'public', 'index.html');
+        
+        if (fs.existsSync(indexPath)) {
+            res.sendFile(indexPath);
+        } else {
+            res.send(`
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>VIP App</title>
+                    <style>
+                        body { 
+                            background: #111; 
+                            color: white; 
+                            font-family: Arial; 
+                            text-align: center; 
+                            padding: 50px; 
+                        }
+                    </style>
+                </head>
+                <body>
+                    <h1>Membros VIP - Em Desenvolvimento</h1>
+                    <p>O arquivo index.html não foi encontrado.</p>
+                    <a href="/painel-x7k2m9" style="color: #E50914;">Acessar Painel Admin</a>
+                </body>
+                </html>
+            `);
+        }
+    } catch (error) {
+        console.error('Erro ao servir index:', error);
+        res.status(500).send('Erro interno');
+    }
 });
 
 // =============================================================================
