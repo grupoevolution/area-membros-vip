@@ -1230,51 +1230,8 @@
         async function openModal(product) {
             console.log('🔍 Abrindo modal para produto:', product.name);
             
-            // Verificar acesso se o produto tem planos configurados
-            const planos = [product.plano_1, product.plano_2, product.plano_3].filter(p => p);
-            
-            if (planos.length > 0 && currentUser) {
-                console.log('🔒 Produto tem planos configurados:', planos);
-                let hasAccess = false;
-                
-                // Verificar acesso para qualquer um dos planos
-                for (const plano of planos) {
-                    try {
-                        console.log(`🔍 Verificando acesso para plano: ${plano}`);
-                        const response = await fetch(`${API_BASE}/api/check-access`, {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json'
-                            },
-                            body: JSON.stringify({
-                                email: currentUser,
-                                plano_code: plano
-                            })
-                        });
-                        
-                        const data = await response.json();
-                        console.log(`📊 Resultado da verificação:`, data);
-                        
-                        if (data.hasAccess) {
-                            hasAccess = true;
-                            console.log(`✅ Acesso liberado para plano: ${plano}`);
-                            break;
-                        }
-                    } catch (error) {
-                        console.error('❌ Erro ao verificar acesso:', error);
-                    }
-                }
-                
-                if (!hasAccess) {
-                    console.log('❌ Usuário não tem acesso - Mostrando modal VIP');
-                    showVipModal();
-                    return;
-                }
-            } else {
-                console.log('🔓 Produto livre ou sem planos configurados');
-            }
-            
-            console.log('✅ Abrindo modal do produto');
+            // SEMPRE ABRIR O MODAL DO PRODUTO - SEM VERIFICAÇÃO DE ACESSO NO BANNER
+            console.log('✅ Abrindo modal do produto diretamente');
             
             const modal = document.getElementById('modalContent');
             const overlay = document.getElementById('productModal');
@@ -1291,29 +1248,80 @@
                 modalVideo.style.display = 'none';
             }
             
-            // Set button action
+            // Set button action - AQUI FAÇA A VERIFICAÇÃO DE ACESSO
             const modalButton = document.getElementById('modalButton');
-            if (product.access_url) {
+            
+            // Verificar acesso apenas no botão de ação
+            const planos = [product.plano_1, product.plano_2, product.plano_3].filter(p => p);
+            let hasAccess = planos.length === 0; // Se não tem planos, tem acesso livre
+            
+            if (planos.length > 0 && currentUser) {
+                console.log('🔒 Verificando acesso para planos:', planos);
+                
+                // Verificar acesso para qualquer um dos planos
+                for (const plano of planos) {
+                    try {
+                        const response = await fetch(`${API_BASE}/api/check-access`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                email: currentUser,
+                                plano_code: plano
+                            })
+                        });
+                        
+                        const data = await response.json();
+                        
+                        if (data.hasAccess) {
+                            hasAccess = true;
+                            console.log(`✅ Acesso liberado para plano: ${plano}`);
+                            break;
+                        }
+                    } catch (error) {
+                        console.error('❌ Erro ao verificar acesso:', error);
+                    }
+                }
+            }
+            
+            // Configurar botão baseado no acesso
+            if (hasAccess) {
+                // Usuário TEM acesso
+                if (product.access_url) {
+                    modalButton.innerHTML = `
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        ACESSAR CONTEÚDO
+                    `;
+                    modalButton.onclick = () => {
+                        window.open(product.access_url, '_blank');
+                        closeModal();
+                    };
+                } else if (product.buy_url) {
+                    modalButton.innerHTML = `
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        COMPRAR AGORA - R$ ${product.price ? product.price.toFixed(2) : '0,00'}
+                    `;
+                    modalButton.onclick = () => {
+                        window.open(product.buy_url, '_blank');
+                        closeModal();
+                    };
+                }
+            } else {
+                // Usuário NÃO TEM acesso - botão vira VIP
                 modalButton.innerHTML = `
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M12 2L13.09 8.26L22 9L17 14L18.18 22L12 19L5.82 22L7 14L2 9L10.91 8.26L12 2Z" fill="white"/>
                     </svg>
-                    ACESSAR CONTEÚDO
+                    QUERO SER VIP
                 `;
                 modalButton.onclick = () => {
-                    window.open(product.access_url, '_blank');
                     closeModal();
-                };
-            } else if (product.buy_url) {
-                modalButton.innerHTML = `
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                    COMPRAR AGORA - R$ ${product.price ? product.price.toFixed(2) : '0,00'}
-                `;
-                modalButton.onclick = () => {
-                    window.open(product.buy_url, '_blank');
-                    closeModal();
+                    setTimeout(() => showVipModal(), 300);
                 };
             }
             
