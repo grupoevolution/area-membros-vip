@@ -295,25 +295,6 @@
             padding-bottom: 0.5rem;
         }
 
-        .file-upload {
-            border: 2px dashed #444;
-            padding: 2rem;
-            text-align: center;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .file-upload:hover {
-            border-color: var(--primary-color);
-            background: rgba(229, 9, 20, 0.1);
-        }
-
-        .file-upload.dragover {
-            border-color: var(--primary-color);
-            background: rgba(229, 9, 20, 0.2);
-        }
-
         .products-list {
             max-height: 500px;
             overflow-y: auto;
@@ -359,34 +340,6 @@
             font-size: 0.8rem;
         }
 
-        .content-management {
-            display: none;
-            background: #1a1a1a;
-            border: 1px solid #333;
-            border-radius: 8px;
-            padding: 1.5rem;
-            margin-top: 2rem;
-        }
-
-        .content-management.active {
-            display: block;
-        }
-
-        .content-list {
-            margin-top: 1.5rem;
-        }
-
-        .content-item {
-            background: #222;
-            border: 1px solid #333;
-            border-radius: 6px;
-            padding: 1rem;
-            margin-bottom: 1rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
         .message {
             padding: 1rem;
             border-radius: 6px;
@@ -404,6 +357,12 @@
             background: rgba(220, 53, 69, 0.2);
             border: 1px solid var(--danger-color);
             color: var(--danger-color);
+        }
+
+        .message.info {
+            background: rgba(23, 162, 184, 0.2);
+            border: 1px solid #17a2b8;
+            color: #17a2b8;
         }
 
         .loader {
@@ -576,60 +535,6 @@
                 </form>
             </div>
 
-            <!-- Content Management Section -->
-            <div class="content-management" id="contentManagement">
-                <h4>Gerenciar Conteúdo: <span id="currentProductName"></span></h4>
-                
-                <form id="addContentForm">
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="contentTitle">Título do Conteúdo *</label>
-                            <input type="text" id="contentTitle" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="contentType">Tipo de Conteúdo *</label>
-                            <select id="contentType" required>
-                                <option value="">Selecione o tipo</option>
-                                <option value="text">Texto</option>
-                                <option value="image">Imagem</option>
-                                <option value="video">Vídeo</option>
-                                <option value="link">Link</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div class="form-group" id="textContentGroup" style="display: none;">
-                        <label for="textContent">Conteúdo de Texto *</label>
-                        <textarea id="textContent"></textarea>
-                    </div>
-
-                    <div class="form-group" id="mediaUrlGroup" style="display: none;">
-                        <label for="mediaUrl">URL da Mídia</label>
-                        <input type="url" id="mediaUrl" placeholder="https://exemplo.com/video.mp4">
-                    </div>
-
-                    <div class="form-row" id="linkContentGroup" style="display: none;">
-                        <div class="form-group">
-                            <label for="linkUrl">URL do Link *</label>
-                            <input type="url" id="linkUrl" placeholder="https://exemplo.com">
-                        </div>
-                        <div class="form-group">
-                            <label for="linkTitle">Título do Botão</label>
-                            <input type="text" id="linkTitle" placeholder="Acessar Link">
-                        </div>
-                    </div>
-
-                    <div style="margin-top: 1rem;">
-                        <button type="submit" class="btn btn-primary">Adicionar Conteúdo</button>
-                        <button type="button" class="btn btn-secondary" onclick="closeContentManagement()">Voltar</button>
-                    </div>
-                </form>
-
-                <div class="content-list" id="contentList">
-                    <!-- Content items will be loaded here -->
-                </div>
-            </div>
-
             <!-- Products List Section -->
             <div class="admin-section">
                 <h3 class="section-title">Produtos Cadastrados</h3>
@@ -644,7 +549,6 @@
         // Global variables
         let isAdmin = false;
         let allProducts = [];
-        let currentEditingProduct = null;
 
         // API functions
         async function apiRequest(url, options = {}) {
@@ -679,6 +583,9 @@
             const loginBtn = document.getElementById('adminLoginBtn');
             const messageDiv = document.getElementById('loginMessage');
             
+            // Clear previous messages
+            messageDiv.innerHTML = '';
+            
             loginBtn.disabled = true;
             loginBtn.textContent = 'VERIFICANDO...';
             
@@ -694,10 +601,11 @@
                     document.getElementById('adminPanel').classList.add('active');
                     await loadProducts();
                 } else {
-                    showMessage(result.message || 'Credenciais incorretas', 'error', messageDiv);
+                    showMessage(result.error || 'Credenciais incorretas', 'error', messageDiv);
                 }
             } catch (error) {
-                showMessage('Erro de conexão. Tente novamente.', 'error', messageDiv);
+                console.error('Login error:', error);
+                showMessage('Erro de conexão. Verifique se o servidor está rodando.', 'error', messageDiv);
             }
             
             loginBtn.disabled = false;
@@ -712,6 +620,9 @@
                 renderProductsList();
             } catch (error) {
                 showMessage('Erro ao carregar produtos: ' + error.message, 'error');
+                // Show empty state instead of error
+                document.getElementById('productsList').innerHTML = 
+                    '<p style="text-align: center; color: #999; padding: 2rem;">Erro ao carregar produtos. Verifique a conexão.</p>';
             }
         }
 
@@ -823,10 +734,20 @@
             
             targetContainer.appendChild(messageDiv);
             
-            // Auto remove success messages
+            // Auto remove success/info messages
             if (type === 'success' || type === 'info') {
                 setTimeout(() => {
                     if (messageDiv.parentNode) {
                         messageDiv.remove();
                     }
                 }, 3000);
+            }
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('Admin panel loaded');
+        });
+    </script>
+</body>
+</html>
