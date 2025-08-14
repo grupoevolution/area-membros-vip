@@ -1091,7 +1091,6 @@
         let currentUser = localStorage.getItem('currentUser');
         let isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
         let hasShownPwaPopup = localStorage.getItem('hasShownPwaPopup') === 'true';
-        let hasShownVipModal = false; // Controle do modal VIP por sessão
         let deferredPrompt;
 
         // API Base URL
@@ -1109,14 +1108,11 @@
         window.addEventListener('beforeinstallprompt', (e) => {
             e.preventDefault();
             deferredPrompt = e;
-            
-            // Mostrar banner de instalação após 3 segundos se estiver logado
-            if (!hasShownPwaPopup && isLoggedIn) {
-                setTimeout(() => showPwaInstallBanner(), 3000);
-            }
+            console.log('📱 PWA install prompt disponível');
         });
 
         function showPwaInstallBanner() {
+            console.log('📱 Mostrando banner PWA');
             const banner = document.getElementById('pwaInstallBanner');
             banner.classList.add('show');
             hasShownPwaPopup = true;
@@ -1124,11 +1120,14 @@
         }
 
         function installPWA() {
+            console.log('📱 Tentando instalar PWA');
             if (deferredPrompt) {
                 deferredPrompt.prompt();
                 deferredPrompt.userChoice.then((choiceResult) => {
                     if (choiceResult.outcome === 'accepted') {
                         console.log('✅ PWA instalado com sucesso');
+                    } else {
+                        console.log('❌ PWA instalação cancelada');
                     }
                     deferredPrompt = null;
                     closePwaInstall();
@@ -1193,9 +1192,12 @@
             
             loadProducts();
             
-            // Mostrar banner PWA se disponível
+            // Mostrar banner PWA após login se disponível e não foi mostrado ainda
             if (!hasShownPwaPopup && deferredPrompt) {
-                setTimeout(() => showPwaInstallBanner(), 2000);
+                setTimeout(() => {
+                    console.log('📱 Mostrando banner PWA após login');
+                    showPwaInstallBanner();
+                }, 3000);
             }
         }
 
@@ -1212,10 +1214,7 @@
         // VIP MODAL FUNCTIONALITY
         // =============================================================================
         function showVipModal() {
-            // Só mostra o modal se não foi mostrado ainda nesta sessão
-            if (!hasShownVipModal) {
-                hasShownVipModal = true;
-            }
+            console.log('🔴 Abrindo modal VIP');
             const modal = document.getElementById('vipModal');
             modal.style.display = 'flex';
         }
@@ -1287,6 +1286,7 @@
             const modalVideo = document.getElementById('modalVideo');
             if (product.main_video) {
                 modalVideo.src = product.main_video;
+                modalVideo.style.display = 'block';
             } else {
                 modalVideo.style.display = 'none';
             }
