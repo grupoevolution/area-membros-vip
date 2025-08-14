@@ -1,6 +1,5 @@
 const express = require('express');
 const sqlite3 = require('sqlite3').verbose();
-const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const cors = require('cors');
@@ -356,29 +355,17 @@ app.delete('/api/products/:id', (req, res) => {
 });
 
 // =============================================================================
-// PERFECTPAY WEBHOOK & ACCESS CONTROL - COM LOGS DETALHADOS
+// PERFECTPAY WEBHOOK & ACCESS CONTROL - OTIMIZADO
 // =============================================================================
 
-// Webhook PerfectPay - COM LOGS DETALHADOS
+// Webhook PerfectPay - VERSÃO OTIMIZADA
 app.post('/webhook/perfectpay', express.json(), (req, res) => {
     console.log('\n🔔 ===== WEBHOOK PERFECTPAY RECEBIDO =====');
     console.log('⏰ Timestamp:', new Date().toLocaleString('pt-BR'));
-    console.log('📄 Headers:', JSON.stringify(req.headers, null, 2));
     console.log('📦 Body completo:', JSON.stringify(req.body, null, 2));
-    console.log('📦 Tipo do body:', typeof req.body);
-    console.log('📦 Keys do body:', Object.keys(req.body || {}));
     
     try {
         const payload = req.body;
-        
-        // Log de cada propriedade importante
-        console.log('\n🔍 ANÁLISE DOS DADOS:');
-        console.log('- sale_status_enum_key:', payload.sale_status_enum_key);
-        console.log('- customer:', payload.customer);
-        console.log('- product:', payload.product);
-        console.log('- plan:', payload.plan);
-        console.log('- code:', payload.code);
-        console.log('- sale_amount:', payload.sale_amount);
         
         // Extrair dados do formato PerfectPay
         const {
@@ -396,7 +383,6 @@ app.post('/webhook/perfectpay', express.json(), (req, res) => {
         console.log('- Código do plano:', plan?.code);
         console.log('- Nome do plano:', plan?.name);
         console.log('- Valor da venda:', sale_amount);
-        console.log('- Código da venda:', sale_code);
         
         // Verificar se o pagamento foi aprovado
         if (sale_status_enum_key !== 'approved') {
@@ -409,15 +395,8 @@ app.post('/webhook/perfectpay', express.json(), (req, res) => {
         const plan_code = plan?.code;
         const plan_name = plan?.name;
         
-        console.log('\n✅ PAGAMENTO APROVADO!');
-        console.log('- Email:', email);
-        console.log('- Plano code:', plan_code);
-        console.log('- Plano name:', plan_name);
-        
         if (!email || !plan_code) {
             console.log('❌ Dados obrigatórios faltando!');
-            console.log('- Email presente:', !!email);
-            console.log('- Plan code presente:', !!plan_code);
             console.log('============================================\n');
             return res.status(400).json({ success: false, error: 'Email e código do plano são obrigatórios' });
         }
@@ -437,13 +416,13 @@ app.post('/webhook/perfectpay', express.json(), (req, res) => {
                 return res.status(500).json({ success: false, error: 'Erro interno' });
             }
             
-            console.log('📦 Produto encontrado:', product_row);
+            console.log('📦 Produto encontrado:', product_row ? 'SIM' : 'NÃO');
             const product_code = product_row?.id || plan_code;
             
             // Verificar se já existe acesso para este email/plano
             const checkQuery = `
                 SELECT * FROM user_access 
-                WHERE email = ? AND plan_code = ?
+                WHERE email = ? AND plan_code = ? AND status = 'active'
                 ORDER BY created_at DESC
                 LIMIT 1
             `;
@@ -453,7 +432,15 @@ app.post('/webhook/perfectpay', express.json(), (req, res) => {
                     console.error('❌ Erro ao verificar acesso existente:', err);
                 }
                 
-                console.log('🔄 Acesso existente:', existing);
+                if (existing) {
+                    console.log('⚠️ Acesso já existe para este email/plano');
+                    console.log('============================================\n');
+                    return res.json({ 
+                        success: true, 
+                        message: 'Acesso já existente',
+                        access_id: existing.id
+                    });
+                }
                 
                 // Liberar acesso
                 console.log('\n🔓 LIBERANDO ACESSO...');
@@ -481,7 +468,6 @@ app.post('/webhook/perfectpay', express.json(), (req, res) => {
                     console.log(`- ID do acesso: ${this.lastID}`);
                     console.log(`- Email: ${email}`);
                     console.log(`- Plano: ${plan_code} (${plan_name})`);
-                    console.log(`- Produto: ${product_code}`);
                     console.log('============================================\n');
                     
                     res.json({ 
@@ -503,16 +489,13 @@ app.post('/webhook/perfectpay', express.json(), (req, res) => {
     }
 });
 
-// Verificar acesso do usuário a um produto específico - POR PLANO - COM LOGS
+// Verificar acesso do usuário - VERSÃO OTIMIZADA
 app.post('/api/check-access', (req, res) => {
     const { email, plano_code } = req.body;
     
-    console.log('\n🔍 VERIFICANDO ACESSO:');
-    console.log('- Email:', email);
-    console.log('- Plano code:', plano_code);
+    console.log(`🔍 Verificando acesso: ${email} → ${plano_code}`);
     
     if (!email || !plano_code) {
-        console.log('❌ Dados obrigatórios faltando');
         return res.status(400).json({ success: false, error: 'Email e código do plano são obrigatórios' });
     }
     
@@ -532,8 +515,6 @@ app.post('/api/check-access', (req, res) => {
             return res.status(500).json({ success: false, error: 'Erro interno' });
         }
         
-        console.log('📊 Resultado da consulta:', row);
-        
         if (row) {
             console.log(`✅ ACESSO LIBERADO para ${email} no plano ${plano_code}`);
             res.json({ 
@@ -544,20 +525,6 @@ app.post('/api/check-access', (req, res) => {
             });
         } else {
             console.log(`❌ ACESSO NEGADO para ${email} no plano ${plano_code}`);
-            
-            // Verificar se existe ALGUM acesso para este email
-            db.all('SELECT * FROM user_access WHERE email = ?', [email], (err, allAccess) => {
-                if (!err && allAccess.length > 0) {
-                    console.log(`📋 Acessos encontrados para ${email}:`, allAccess.map(a => ({
-                        plan_code: a.plan_code,
-                        plan_name: a.plan_name,
-                        created_at: a.created_at
-                    })));
-                } else {
-                    console.log(`📭 Nenhum acesso encontrado para ${email}`);
-                }
-            });
-            
             res.json({ 
                 success: true, 
                 hasAccess: false, 
@@ -571,11 +538,9 @@ app.post('/api/check-access', (req, res) => {
 // API ROUTES - ADMIN AUTH
 // =============================================================================
 
-// Simple admin login with new credentials
 app.post('/api/admin/login', (req, res) => {
     const { username, password } = req.body;
     
-    // New secure credentials
     if (username === 'painel-iago' && password === '#Senha8203') {
         res.json({ success: true, message: 'Login realizado com sucesso!' });
     } else {
@@ -584,10 +549,9 @@ app.post('/api/admin/login', (req, res) => {
 });
 
 // =============================================================================
-// STATIC FILES & PWA
+// PWA ROUTES
 // =============================================================================
 
-// Serve manifest.json
 app.get('/manifest.json', (req, res) => {
     const manifest = {
         "name": "Membros VIP",
@@ -597,11 +561,18 @@ app.get('/manifest.json', (req, res) => {
         "display": "standalone",
         "background_color": "#000000",
         "theme_color": "#E50914",
+        "orientation": "portrait",
+        "scope": "/",
         "icons": [
             {
-                "src": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTI4IiBoZWlnaHQ9IjEyOCIgdmlld0JveD0iMCAwIDEyOCAxMjgiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CiAgPHJlY3Qgd2lkdGg9IjEyOCIgaGVpZ2h0PSIxMjgiIGZpbGw9IiNFNTA5MTQiLz4KICA8dGV4dCB4PSI2NCIgeT0iNjgiIGZpbGw9IndoaXRlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmb250LXNpemU9IjIwIiBmb250LXdlaWdodD0iYm9sZCI+VklQPC90ZXh0Pgo8L3N2Zz4=",
+                "src": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTkyIiBoZWlnaHQ9IjE5MiIgdmlld0JveD0iMCAwIDE5MiAxOTIiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CiAgPHJlY3Qgd2lkdGg9IjE5MiIgaGVpZ2h0PSIxOTIiIGZpbGw9IiNFNTA5MTQiLz4KICA8dGV4dCB4PSI5NiIgeT0iMTA2IiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC1zaXplPSIzNiIgZm9udC13ZWlnaHQ9ImJvbGQiPldJUDwvdGV4dD4KPC9zdmc+",
                 "type": "image/svg+xml",
-                "sizes": "128x128"
+                "sizes": "192x192"
+            },
+            {
+                "src": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTEyIiBoZWlnaHQ9IjUxMiIgdmlld0JveD0iMCAwIDUxMiA1MTIiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CiAgPHJlY3Qgd2lkdGg9IjUxMiIgaGVpZ2h0PSI1MTIiIGZpbGw9IiNFNTA5MTQiLz4KICA8dGV4dCB4PSIyNTYiIHk9IjI4NiIgZmlsbD0id2hpdGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZvbnQtc2l6ZT0iOTYiIGZvbnQtd2VpZ2h0PSJib2xkIj5WSVA8L3RleHQ+Cjwvc3ZnPg==",
+                "type": "image/svg+xml",
+                "sizes": "512x512"
             }
         ]
     };
@@ -609,13 +580,13 @@ app.get('/manifest.json', (req, res) => {
     res.json(manifest);
 });
 
-// Service Worker
 app.get('/sw.js', (req, res) => {
     const swContent = `
-        const CACHE_NAME = 'vip-app-v1';
+        const CACHE_NAME = 'vip-app-v2';
         const urlsToCache = [
             '/',
-            '/manifest.json'
+            '/manifest.json',
+            '/api/products'
         ];
 
         self.addEventListener('install', event => {
@@ -642,21 +613,22 @@ app.get('/sw.js', (req, res) => {
     res.send(swContent);
 });
 
-// Serve admin panel with secure URL
+// =============================================================================
+// SERVE STATIC FILES
+// =============================================================================
+
 app.get('/painel-x7k2m9', (req, res) => {
     try {
         const adminPath = path.join(__dirname, 'public', 'admin.html');
         
-        // Check if file exists
         if (fs.existsSync(adminPath)) {
             res.sendFile(adminPath);
         } else {
-            // If admin.html doesn't exist, send a basic response
             res.send(`
                 <!DOCTYPE html>
                 <html>
                 <head>
-                    <title>Admin - Em Manutenção</title>
+                    <title>Admin - Debug</title>
                     <style>
                         body { 
                             background: #111; 
@@ -665,17 +637,21 @@ app.get('/painel-x7k2m9', (req, res) => {
                             text-align: center; 
                             padding: 50px; 
                         }
+                        a { color: #E50914; text-decoration: none; margin: 10px; display: block; }
                     </style>
                 </head>
                 <body>
-                    <h1>Painel em Manutenção</h1>
+                    <h1>🚀 Sistema VIP - Debug Panel</h1>
                     <p>O arquivo admin.html não foi encontrado.</p>
-                    <p>Certifique-se de que o arquivo está em: public/admin.html</p>
                     
-                    <h2>Debug Routes:</h2>
-                    <p><a href="/debug/products" style="color: #E50914;">Ver Produtos</a></p>
-                    <p><a href="/debug/access" style="color: #E50914;">Ver Acessos</a></p>
-                    <p><a href="/debug/access/cauapetry2006@gmail.com" style="color: #E50914;">Ver Acesso do Cauan</a></p>
+                    <h2>🔧 Links de Debug:</h2>
+                    <a href="/debug/products">📦 Ver Produtos</a>
+                    <a href="/debug/access">🔑 Ver Todos os Acessos</a>
+                    <a href="/debug/access/cauapetry2006@gmail.com">👤 Ver Acesso do Cauan</a>
+                    
+                    <h2>🧪 Testar Acesso:</h2>
+                    <p>POST para /debug/simulate-access com:</p>
+                    <pre>{ "email": "teste@email.com", "plan_code": "PPLQQLST6" }</pre>
                 </body>
                 </html>
             `);
@@ -686,7 +662,6 @@ app.get('/painel-x7k2m9', (req, res) => {
     }
 });
 
-// Serve main app
 app.get('/', (req, res) => {
     try {
         const indexPath = path.join(__dirname, 'public', 'index.html');
@@ -698,7 +673,7 @@ app.get('/', (req, res) => {
                 <!DOCTYPE html>
                 <html>
                 <head>
-                    <title>VIP App</title>
+                    <title>🚀 Membros VIP</title>
                     <style>
                         body { 
                             background: #111; 
@@ -707,17 +682,17 @@ app.get('/', (req, res) => {
                             text-align: center; 
                             padding: 50px; 
                         }
+                        a { color: #E50914; text-decoration: none; margin: 10px; display: block; }
                     </style>
                 </head>
                 <body>
-                    <h1>Membros VIP - Em Desenvolvimento</h1>
-                    <p>O arquivo index.html não foi encontrado.</p>
-                    <p>Coloque o arquivo index.html na pasta public/</p>
+                    <h1>🚀 Membros VIP - Sistema Funcionando!</h1>
+                    <p>✅ Servidor rodando corretamente</p>
+                    <p>⚠️ Arquivo index.html não encontrado em public/</p>
                     
-                    <h2>Links Úteis:</h2>
-                    <p><a href="/painel-x7k2m9" style="color: #E50914;">Acessar Painel Admin</a></p>
-                    <p><a href="/debug/products" style="color: #E50914;">Ver Produtos (Debug)</a></p>
-                    <p><a href="/debug/access" style="color: #E50914;">Ver Acessos (Debug)</a></p>
+                    <h2>Links:</h2>
+                    <a href="/painel-x7k2m9">🛠️ Painel Admin</a>
+                    <a href="/debug/products">📦 Ver Produtos (Debug)</a>
                 </body>
                 </html>
             `);
@@ -729,28 +704,31 @@ app.get('/', (req, res) => {
 });
 
 // =============================================================================
-// ERROR HANDLING
+// ERROR HANDLING & SERVER START
 // =============================================================================
+
 app.use((error, req, res, next) => {
-    console.error('Error:', error);
+    console.error('Server Error:', error);
     res.status(500).json({ success: false, error: 'Erro interno do servidor' });
 });
 
-// =============================================================================
-// START SERVER
-// =============================================================================
 app.listen(PORT, () => {
-    console.log(`🚀 Servidor rodando na porta ${PORT}`);
-    console.log(`📱 App principal: http://localhost:${PORT}`);
-    console.log(`⚙️  Painel admin: http://localhost:${PORT}/painel-x7k2m9`);
-    console.log(`📊 API: http://localhost:${PORT}/api/products`);
-    console.log(`🔌 Webhook: http://localhost:${PORT}/webhook/perfectpay`);
-    console.log(`🐛 Debug produtos: http://localhost:${PORT}/debug/products`);
-    console.log(`🐛 Debug acessos: http://localhost:${PORT}/debug/access`);
-    console.log(`🐛 Testar acesso Cauan: http://localhost:${PORT}/debug/access/cauapetry2006@gmail.com`);
-    console.log(`\n📝 Para testar manualmente:`);
-    console.log(`   POST /debug/simulate-access`);
-    console.log(`   { "email": "cauapetry2006@gmail.com", "plan_code": "PPLQQLST6" }`);
+    console.log(`\n🚀 ===== SERVIDOR VIP INICIADO =====`);
+    console.log(`⏰ ${new Date().toLocaleString('pt-BR')}`);
+    console.log(`🌐 Porta: ${PORT}`);
+    console.log(`\n📱 LINKS PRINCIPAIS:`);
+    console.log(`   App Principal: http://localhost:${PORT}`);
+    console.log(`   Painel Admin:  http://localhost:${PORT}/painel-x7k2m9`);
+    console.log(`\n🔌 API ENDPOINTS:`);
+    console.log(`   Produtos:      GET  /api/products`);
+    console.log(`   Webhook:       POST /webhook/perfectpay`);
+    console.log(`   Verificar:     POST /api/check-access`);
+    console.log(`\n🐛 DEBUG ROUTES:`);
+    console.log(`   Ver Produtos:  GET  /debug/products`);
+    console.log(`   Ver Acessos:   GET  /debug/access`);
+    console.log(`   Simular:       POST /debug/simulate-access`);
+    console.log(`\n✅ Sistema pronto para receber webhooks do PerfectPay!`);
+    console.log(`=====================================\n`);
 });
 
 // Graceful shutdown
