@@ -272,6 +272,29 @@
             gap: 1rem;
         }
 
+        .form-row-3 {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 1rem;
+        }
+
+        .form-section {
+            background: #2a2a2a;
+            border: 1px solid #444;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .form-section-title {
+            color: var(--primary-color);
+            font-size: 1.1rem;
+            margin-bottom: 1rem;
+            font-weight: 600;
+            border-bottom: 1px solid #444;
+            padding-bottom: 0.5rem;
+        }
+
         .file-upload {
             border: 2px dashed #444;
             padding: 2rem;
@@ -411,6 +434,10 @@
                 grid-template-columns: 1fr;
             }
 
+            .form-row-3 {
+                grid-template-columns: 1fr;
+            }
+
             .product-actions {
                 flex-direction: column;
                 align-items: stretch;
@@ -431,10 +458,17 @@
             <div id="loginMessage"></div>
             <form id="adminLoginForm">
                 <input 
+                    type="text" 
+                    class="password-input" 
+                    id="usernameInput" 
+                    placeholder="Digite o usuário"
+                    required
+                >
+                <input 
                     type="password" 
                     class="password-input" 
                     id="passwordInput" 
-                    placeholder="Digite a senha de administrador"
+                    placeholder="Digite a senha"
                     required
                 >
                 <button type="submit" class="login-btn" id="adminLoginBtn">
@@ -461,53 +495,81 @@
             <div class="admin-section">
                 <h3 class="section-title">Adicionar Novo Produto</h3>
                 <form id="addProductForm">
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="productName">Nome do Produto *</label>
-                            <input type="text" id="productName" required>
+                    <div class="form-section">
+                        <div class="form-section-title">Informações Básicas</div>
+                        
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="productName">Nome do Produto *</label>
+                                <input type="text" id="productName" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="productCategory">Categoria *</label>
+                                <select id="productCategory" required>
+                                    <option value="">Selecione uma categoria</option>
+                                    <option value="meus_produtos">Meus Produtos</option>
+                                    <option value="mais_vendidos">Mais Vendidos</option>
+                                    <option value="criadoras_conteudos">Criadoras de Conteúdos</option>
+                                    <option value="chamadas_video">Chamadas de Vídeo</option>
+                                    <option value="para_homens">Para Homens</option>
+                                    <option value="fetiches">Fetiches</option>
+                                </select>
+                            </div>
                         </div>
+
                         <div class="form-group">
-                            <label for="productCategory">Categoria *</label>
-                            <select id="productCategory" required>
-                                <option value="">Selecione uma categoria</option>
-                                <option value="meus_produtos">Meus Produtos</option>
-                                <option value="mais_vendidos">Mais Vendidos</option>
-                                <option value="criadoras_conteudos">Criadoras de Conteúdos</option>
-                                <option value="chamadas_video">Chamadas de Vídeo</option>
-                                <option value="para_homens">Para Homens</option>
-                                <option value="fetiches">Fetiches</option>
-                            </select>
+                            <label for="productDescription">Descrição *</label>
+                            <textarea id="productDescription" required></textarea>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="productPrice">Preço (R$)</label>
+                                <input type="number" id="productPrice" step="0.01" min="0" placeholder="0.00">
+                            </div>
+                            <div class="form-group">
+                                <label for="productBannerUrl">URL da Imagem (Banner)</label>
+                                <input type="url" id="productBannerUrl" placeholder="https://exemplo.com/imagem.jpg">
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="productMainVideo">URL do Vídeo Principal</label>
+                                <input type="url" id="productMainVideo" placeholder="https://exemplo.com/video.mp4">
+                            </div>
+                            <div class="form-group">
+                                <label for="productAccessUrl">URL de Acesso/WhatsApp</label>
+                                <input type="url" id="productAccessUrl" placeholder="https://wa.me/5511999999999">
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="productBuyUrl">Link de Compra</label>
+                            <input type="url" id="productBuyUrl" placeholder="https://exemplo.com/comprar">
                         </div>
                     </div>
 
-                    <div class="form-group">
-                        <label for="productDescription">Descrição *</label>
-                        <textarea id="productDescription" required></textarea>
-                    </div>
-
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="productPrice">Preço (R$)</label>
-                            <input type="number" id="productPrice" step="0.01" min="0" placeholder="0.00">
+                    <div class="form-section">
+                        <div class="form-section-title">Códigos de Plano PerfectPay</div>
+                        <p style="color: #999; margin-bottom: 1rem; font-size: 0.9rem;">
+                            Configure os códigos dos planos do PerfectPay que darão acesso a este produto
+                        </p>
+                        
+                        <div class="form-row-3">
+                            <div class="form-group">
+                                <label for="plano1">Código Plano 1</label>
+                                <input type="text" id="plano1" placeholder="Ex: PPLQQLST6">
+                            </div>
+                            <div class="form-group">
+                                <label for="plano2">Código Plano 2</label>
+                                <input type="text" id="plano2" placeholder="Ex: PPLQQLST7">
+                            </div>
+                            <div class="form-group">
+                                <label for="plano3">Código Plano 3</label>
+                                <input type="text" id="plano3" placeholder="Ex: PPLQQLST8">
+                            </div>
                         </div>
-                        <div class="form-group">
-                            <label for="productType">Tipo de Produto *</label>
-                            <select id="productType" required>
-                                <option value="">Selecione o tipo</option>
-                                <option value="owned">Produto Próprio (com conteúdo interno)</option>
-                                <option value="external">Produto Externo (link de compra)</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="productBanner">URL da Imagem (Banner)</label>
-                        <input type="url" id="productBannerUrl" placeholder="https://exemplo.com/imagem.jpg">
-                    </div>
-
-                    <div class="form-group" id="externalLinkGroup" style="display: none;">
-                        <label for="productBuyUrl">Link de Compra Externa *</label>
-                        <input type="url" id="productBuyUrl" placeholder="https://exemplo.com/comprar">
                     </div>
 
                     <button type="submit" class="btn btn-success">Adicionar Produto</button>
@@ -612,6 +674,7 @@
         document.getElementById('adminLoginForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             
+            const username = document.getElementById('usernameInput').value;
             const password = document.getElementById('passwordInput').value;
             const loginBtn = document.getElementById('adminLoginBtn');
             const messageDiv = document.getElementById('loginMessage');
@@ -622,7 +685,7 @@
             try {
                 const result = await apiRequest('/api/admin/login', {
                     method: 'POST',
-                    body: JSON.stringify({ password })
+                    body: JSON.stringify({ username, password })
                 });
                 
                 if (result.success) {
@@ -631,7 +694,7 @@
                     document.getElementById('adminPanel').classList.add('active');
                     await loadProducts();
                 } else {
-                    showMessage(result.message || 'Senha incorreta', 'error', messageDiv);
+                    showMessage(result.message || 'Credenciais incorretas', 'error', messageDiv);
                 }
             } catch (error) {
                 showMessage('Erro de conexão. Tente novamente.', 'error', messageDiv);
@@ -641,26 +704,11 @@
             loginBtn.textContent = 'ACESSAR PAINEL';
         });
 
-        // Check if already logged in as admin
-        async function checkAdminStatus() {
-            try {
-                const result = await apiRequest('/api/admin/check');
-                if (result.isAdmin) {
-                    isAdmin = true;
-                    document.getElementById('adminLogin').style.display = 'none';
-                    document.getElementById('adminPanel').classList.add('active');
-                    await loadProducts();
-                }
-            } catch (error) {
-                console.log('Not logged in as admin');
-            }
-        }
-
         // Load products
         async function loadProducts() {
             try {
-                const products = await apiRequest('/api/products');
-                allProducts = products;
+                const result = await apiRequest('/api/products');
+                allProducts = result.products || [];
                 renderProductsList();
             } catch (error) {
                 showMessage('Erro ao carregar produtos: ' + error.message, 'error');
@@ -680,10 +728,12 @@
                 <div class="product-item">
                     <div class="product-info">
                         <h4>${product.name}</h4>
-                        <p>${getCategoryName(product.category)} • ${product.type === 'owned' ? 'Próprio' : 'Externo'} • R$ ${product.price.toFixed(2)}</p>
+                        <p>${getCategoryName(product.category)} • R$ ${(product.price || 0).toFixed(2)}</p>
+                        <p style="font-size: 0.8rem; color: #666;">
+                            Planos: ${[product.plano_1, product.plano_2, product.plano_3].filter(p => p).join(', ') || 'Nenhum'}
+                        </p>
                     </div>
                     <div class="product-actions">
-                        ${product.type === 'owned' ? `<button class="btn btn-primary" onclick="editProductContent(${product.id})">Gerenciar Conteúdo</button>` : ''}
                         <button class="btn btn-danger" onclick="deleteProduct(${product.id})">Excluir</button>
                     </div>
                 </div>
@@ -703,46 +753,6 @@
             return categories[category] || category;
         }
 
-        // Product type change handler
-        document.getElementById('productType').addEventListener('change', function() {
-            const externalGroup = document.getElementById('externalLinkGroup');
-            const buyUrlInput = document.getElementById('productBuyUrl');
-            
-            if (this.value === 'external') {
-                externalGroup.style.display = 'block';
-                buyUrlInput.required = true;
-            } else {
-                externalGroup.style.display = 'none';
-                buyUrlInput.required = false;
-            }
-        });
-
-        // Content type change handler
-        document.getElementById('contentType').addEventListener('change', function() {
-            const textGroup = document.getElementById('textContentGroup');
-            const mediaGroup = document.getElementById('mediaUrlGroup');
-            const linkGroup = document.getElementById('linkContentGroup');
-            
-            // Hide all groups
-            [textGroup, mediaGroup, linkGroup].forEach(group => {
-                group.style.display = 'none';
-            });
-            
-            // Show appropriate group
-            switch(this.value) {
-                case 'text':
-                    textGroup.style.display = 'block';
-                    break;
-                case 'image':
-                case 'video':
-                    mediaGroup.style.display = 'block';
-                    break;
-                case 'link':
-                    linkGroup.style.display = 'block';
-                    break;
-            }
-        });
-
         // Add product form handler
         document.getElementById('addProductForm').addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -752,14 +762,18 @@
                 description: document.getElementById('productDescription').value,
                 category: document.getElementById('productCategory').value,
                 banner_url: document.getElementById('productBannerUrl').value,
+                main_video: document.getElementById('productMainVideo').value,
+                access_url: document.getElementById('productAccessUrl').value,
+                buy_url: document.getElementById('productBuyUrl').value,
                 price: parseFloat(document.getElementById('productPrice').value) || 0,
-                type: document.getElementById('productType').value,
-                buy_url: document.getElementById('productBuyUrl').value || undefined
+                plano_1: document.getElementById('plano1').value || null,
+                plano_2: document.getElementById('plano2').value || null,
+                plano_3: document.getElementById('plano3').value || null
             };
             
             try {
                 showMessage('Adicionando produto...', 'info');
-                const result = await apiRequest('/api/admin/products', {
+                const result = await apiRequest('/api/products', {
                     method: 'POST',
                     body: JSON.stringify(formData)
                 });
@@ -772,165 +786,47 @@
             }
         });
 
-        // Edit product content
-        function editProductContent(productId) {
-            const product = allProducts.find(p => p.id === productId);
-            if (!product || product.type !== 'owned') return;
-            
-            currentEditingProduct = productId;
-            document.getElementById('currentProductName').textContent = product.name;
-            document.getElementById('contentManagement').classList.add('active');
-            
-            loadContentList();
-        }
-
-        // Load content list
-        function loadContentList() {
-            const product = allProducts.find(p => p.id === currentEditingProduct);
-            const container = document.getElementById('contentList');
-            
-            if (!product || !product.content || product.content.length === 0) {
-                container.innerHTML = '<p style="color: #999; text-align: center; margin-top: 2rem;">Nenhum conteúdo adicionado ainda.</p>';
-                return;
-            }
-            
-            container.innerHTML = `
-                <h5 style="color: white; margin-top: 2rem; margin-bottom: 1rem;">Conteúdos Existentes:</h5>
-                ${product.content.map(content => `
-                    <div class="content-item">
-                        <div>
-                            <strong>${content.title}</strong>
-                            <br><small style="color: #999;">${content.type}</small>
-                        </div>
-                        <button class="btn btn-danger" onclick="deleteContent(${content.id})">Excluir</button>
-                    </div>
-                `).join('')}
-            `;
-        }
-
-        // Close content management
-        function closeContentManagement() {
-            document.getElementById('contentManagement').classList.remove('active');
-            currentEditingProduct = null;
-        }
-
-        // Add content form handler
-        document.getElementById('addContentForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            if (!currentEditingProduct) return;
-            
-            const contentType = document.getElementById('contentType').value;
-            let contentData = {
-                title: document.getElementById('contentTitle').value,
-                type: contentType
-            };
-            
-            switch(contentType) {
-                case 'text':
-                    contentData.content = document.getElementById('textContent').value;
-                    break;
-                case 'image':
-                case 'video':
-                    contentData.url = document.getElementById('mediaUrl').value;
-                    break;
-                case 'link':
-                    contentData.url = document.getElementById('linkUrl').value;
-                    contentData.linkTitle = document.getElementById('linkTitle').value;
-                    break;
-            }
+        // Delete product
+        async function deleteProduct(productId) {
+            if (!confirm('Tem certeza que deseja excluir este produto? Esta ação não pode ser desfeita.')) return;
             
             try {
-                showMessage('Adicionando conteúdo...', 'info');
-                await apiRequest(`/api/admin/products/${currentEditingProduct}/content`, {
-                    method: 'POST',
-                    body: JSON.stringify(contentData)
+                showMessage('Excluindo produto...', 'info');
+                await apiRequest(`/api/products/${productId}`, {
+                    method: 'DELETE'
                 });
                 
-                showMessage('Conteúdo adicionado com sucesso!', 'success');
-                document.getElementById('addContentForm').reset();
+                showMessage('Produto excluído com sucesso!', 'success');
                 await loadProducts();
-                loadContentList loadContentList();
-           } catch (error) {
-               showMessage('Erro ao adicionar conteúdo: ' + error.message, 'error');
-           }
-       });
+            } catch (error) {
+                showMessage('Erro ao excluir produto: ' + error.message, 'error');
+            }
+        }
 
-       // Delete product
-       async function deleteProduct(productId) {
-           if (!confirm('Tem certeza que deseja excluir este produto? Esta ação não pode ser desfeita.')) return;
-           
-           try {
-               showMessage('Excluindo produto...', 'info');
-               await apiRequest(`/api/admin/products/${productId}`, {
-                   method: 'DELETE'
-               });
-               
-               showMessage('Produto excluído com sucesso!', 'success');
-               await loadProducts();
-           } catch (error) {
-               showMessage('Erro ao excluir produto: ' + error.message, 'error');
-           }
-       }
+        // Logout
+        async function handleLogout() {
+            if (!confirm('Deseja realmente sair do painel administrativo?')) return;
+            location.reload();
+        }
 
-       // Delete content
-       async function deleteContent(contentId) {
-           if (!confirm('Tem certeza que deseja excluir este conteúdo?')) return;
-           
-           try {
-               showMessage('Excluindo conteúdo...', 'info');
-               await apiRequest(`/api/admin/products/${currentEditingProduct}/content/${contentId}`, {
-                   method: 'DELETE'
-               });
-               
-               showMessage('Conteúdo excluído com sucesso!', 'success');
-               await loadProducts();
-               loadContentList();
-           } catch (error) {
-               showMessage('Erro ao excluir conteúdo: ' + error.message, 'error');
-           }
-       }
-
-       // Logout
-       async function handleLogout() {
-           if (!confirm('Deseja realmente sair do painel administrativo?')) return;
-           
-           try {
-               await apiRequest('/api/admin/logout', { method: 'POST' });
-               location.reload();
-           } catch (error) {
-               location.reload();
-           }
-       }
-
-       // Message system
-       function showMessage(message, type = 'info', container = null) {
-           const messageDiv = document.createElement('div');
-           messageDiv.className = `message ${type}`;
-           messageDiv.textContent = message;
-           
-           const targetContainer = container || document.getElementById('messageContainer');
-           
-           // Remove existing messages
-           const existingMessages = targetContainer.querySelectorAll('.message');
-           existingMessages.forEach(msg => msg.remove());
-           
-           targetContainer.appendChild(messageDiv);
-           
-           // Auto remove success messages
-           if (type === 'success' || type === 'info') {
-               setTimeout(() => {
-                   if (messageDiv.parentNode) {
-                       messageDiv.remove();
-                   }
-               }, 3000);
-           }
-       }
-
-       // Initialize
-       document.addEventListener('DOMContentLoaded', () => {
-           checkAdminStatus();
-       });
-   </script>
-</body>
-</html>
+        // Message system
+        function showMessage(message, type = 'info', container = null) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${type}`;
+            messageDiv.textContent = message;
+            
+            const targetContainer = container || document.getElementById('messageContainer');
+            
+            // Remove existing messages
+            const existingMessages = targetContainer.querySelectorAll('.message');
+            existingMessages.forEach(msg => msg.remove());
+            
+            targetContainer.appendChild(messageDiv);
+            
+            // Auto remove success messages
+            if (type === 'success' || type === 'info') {
+                setTimeout(() => {
+                    if (messageDiv.parentNode) {
+                        messageDiv.remove();
+                    }
+                }, 3000);
