@@ -168,6 +168,7 @@
             text-decoration: none;
             display: inline-block;
             text-align: center;
+            font-size: 0.9rem;
         }
 
         .btn-primary {
@@ -207,6 +208,16 @@
 
         .btn-secondary:hover {
             background: #777;
+            transform: translateY(-2px);
+        }
+
+        .btn-warning {
+            background: var(--warning-color);
+            color: #000;
+        }
+
+        .btn-warning:hover {
+            background: #e0a800;
             transform: translateY(-2px);
         }
 
@@ -295,8 +306,63 @@
             padding-bottom: 0.5rem;
         }
 
+        /* Gallery Section */
+        .gallery-section {
+            background: #2a2a2a;
+            border: 1px solid #444;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .gallery-items {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .gallery-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem;
+            background: #333;
+            border-radius: 6px;
+            border: 1px solid #444;
+        }
+
+        .gallery-item select {
+            width: 120px;
+        }
+
+        .gallery-item input {
+            flex: 1;
+        }
+
+        .gallery-item button {
+            padding: 0.5rem 1rem;
+            font-size: 0.8rem;
+        }
+
+        .add-gallery-btn {
+            background: #444;
+            color: white;
+            border: 1px solid #666;
+            padding: 0.8rem 1.5rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            margin-top: 1rem;
+        }
+
+        .add-gallery-btn:hover {
+            background: #555;
+            border-color: #777;
+        }
+
         .products-list {
-            max-height: 500px;
+            max-height: 600px;
             overflow-y: auto;
             border: 1px solid #333;
             border-radius: 6px;
@@ -340,6 +406,61 @@
             font-size: 0.8rem;
         }
 
+        /* Modal */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            justify-content: center;
+            align-items: flex-start;
+            z-index: 1000;
+            overflow-y: auto;
+            padding: 2rem 0;
+        }
+
+        .modal-content {
+            background: var(--card-bg);
+            border-radius: 8px;
+            width: 90%;
+            max-width: 800px;
+            margin: 0 auto;
+            border: 1px solid #333;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            padding: 1.5rem 2rem;
+            border-bottom: 1px solid #333;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-title {
+            color: white;
+            font-size: 1.5rem;
+            margin: 0;
+        }
+
+        .close-modal {
+            background: var(--danger-color);
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .modal-body {
+            padding: 2rem;
+        }
+
         .message {
             padding: 1rem;
             border-radius: 6px;
@@ -380,6 +501,33 @@
             100% { transform: rotate(360deg); }
         }
 
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: #333;
+            padding: 1.5rem;
+            border-radius: 8px;
+            text-align: center;
+            border: 1px solid #444;
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--primary-color);
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            color: #ccc;
+            font-size: 0.9rem;
+        }
+
         @media (max-width: 768px) {
             .admin-content {
                 padding: 1rem;
@@ -400,6 +548,26 @@
             .product-actions {
                 flex-direction: column;
                 align-items: stretch;
+            }
+
+            .gallery-item {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .gallery-item select,
+            .gallery-item input {
+                width: 100%;
+                margin-bottom: 0.5rem;
+            }
+
+            .modal-content {
+                width: 95%;
+                margin: 1rem auto;
+            }
+
+            .modal-body {
+                padding: 1rem;
             }
         }
     </style>
@@ -450,6 +618,29 @@
         <div class="admin-content">
             <div id="messageContainer"></div>
 
+            <!-- Stats Section -->
+            <div class="admin-section">
+                <h3 class="section-title">Estatísticas</h3>
+                <div class="stats-grid" id="statsGrid">
+                    <div class="stat-card">
+                        <div class="stat-number" id="totalProducts">-</div>
+                        <div class="stat-label">Total de Produtos</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="totalAccess">-</div>
+                        <div class="stat-label">Acessos Ativos</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="meusProducts">-</div>
+                        <div class="stat-label">Meus Produtos</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="premiumProducts">-</div>
+                        <div class="stat-label">Produtos Premium</div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Add Product Section -->
             <div class="admin-section">
                 <h3 class="section-title">Adicionar Novo Produto</h3>
@@ -478,7 +669,7 @@
 
                         <div class="form-group">
                             <label for="productDescription">Descrição *</label>
-                            <textarea id="productDescription" required></textarea>
+                            <textarea id="productDescription" required placeholder="Descreva o produto detalhadamente"></textarea>
                         </div>
 
                         <div class="form-row">
@@ -487,8 +678,8 @@
                                 <input type="number" id="productPrice" step="0.01" min="0" placeholder="0.00">
                             </div>
                             <div class="form-group">
-                                <label for="productBannerUrl">URL da Imagem (Banner)</label>
-                                <input type="url" id="productBannerUrl" placeholder="https://exemplo.com/imagem.jpg">
+                                <label for="productBannerUrl">URL da Imagem (Banner) *</label>
+                                <input type="url" id="productBannerUrl" placeholder="https://exemplo.com/imagem.jpg" required>
                             </div>
                         </div>
 
@@ -531,6 +722,28 @@
                         </div>
                     </div>
 
+                    <div class="gallery-section">
+                        <div class="form-section-title">Galeria de Mídias (Prévia do Conteúdo)</div>
+                        <p style="color: #999; margin-bottom: 1rem; font-size: 0.9rem;">
+                            Adicione vídeos e imagens que serão exibidos na galeria de prévia do produto
+                        </p>
+                        
+                        <div class="gallery-items" id="galleryItems">
+                            <div class="gallery-item">
+                                <select class="gallery-type">
+                                    <option value="image">Imagem</option>
+                                    <option value="video">Vídeo</option>
+                                </select>
+                                <input type="url" class="gallery-url" placeholder="https://exemplo.com/media.jpg">
+                                <button type="button" class="btn btn-danger remove-gallery-item">Remover</button>
+                            </div>
+                        </div>
+                        
+                        <button type="button" class="add-gallery-btn" onclick="addGalleryItem()">
+                            + Adicionar Mídia
+                        </button>
+                    </div>
+
                     <button type="submit" class="btn btn-success">Adicionar Produto</button>
                 </form>
             </div>
@@ -545,15 +758,128 @@
         </div>
     </div>
 
-    <script>
-        // Global variables
-        let isAdmin = false;
-        let allProducts = [];
+    <!-- Edit Product Modal -->
+    <div class="modal" id="editModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">Editar Produto</h3>
+                <button class="close-modal" onclick="closeEditModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <form id="editProductForm">
+                    <input type="hidden" id="editProductId">
+                    
+                    <div class="form-section">
+                        <div class="form-section-title">Informações Básicas</div>
+                        
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="editProductName">Nome do Produto *</label>
+                                <input type="text" id="editProductName" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="editProductCategory">Categoria *</label>
+                                <select id="editProductCategory" required>
+                                    <option value="">Selecione uma categoria</option>
+                                    <option value="meus_produtos">Meus Produtos</option>
+                                    <option value="mais_vendidos">Mais Vendidos</option>
+                                    <option value="criadoras_conteudos">Criadoras de Conteúdos</option>
+                                    <option value="chamadas_video">Chamadas de Vídeo</option>
+                                    <option value="para_homens">Para Homens</option>
+                                    <option value="fetiches">Fetiches</option>
+                                </select>
+                            </div>
+                        </div>
 
-        // API functions
+                        <div class="form-group">
+                            <label for="editProductDescription">Descrição *</label>
+                            <textarea id="editProductDescription" required></textarea>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="editProductPrice">Preço (R$)</label>
+                                <input type="number" id="editProductPrice" step="0.01" min="0" placeholder="0.00">
+                            </div>
+                            <div class="form-group">
+                                <label for="editProductBannerUrl">URL da Imagem (Banner) *</label>
+                                <input type="url" id="editProductBannerUrl" required>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="editProductMainVideo">URL do Vídeo Principal</label>
+                                <input type="url" id="editProductMainVideo">
+                            </div>
+                            <div class="form-group">
+                                <label for="editProductAccessUrl">URL de Acesso/WhatsApp</label>
+                                <input type="url" id="editProductAccessUrl">
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="editProductBuyUrl">Link de Compra</label>
+                            <input type="url" id="editProductBuyUrl">
+                        </div>
+                    </div>
+
+                    <div class="form-section">
+                        <div class="form-section-title">Códigos de Plano PerfectPay</div>
+                        
+                        <div class="form-row-3">
+                            <div class="form-group">
+                                <label for="editPlano1">Código Plano 1</label>
+                                <input type="text" id="editPlano1" placeholder="Ex: PPLQQLST6">
+                            </div>
+                            <div class="form-group">
+                                <label for="editPlano2">Código Plano 2</label>
+                                <input type="text" id="editPlano2" placeholder="Ex: PPLQQLST7">
+                            </div>
+                            <div class="form-group">
+                                <label for="editPlano3">Código Plano 3</label>
+                                <input type="text" id="editPlano3" placeholder="Ex: PPLQQLST8">
+                            </div> </div>
+                    </div>
+
+                    <div class="gallery-section">
+                        <div class="form-section-title">Galeria de Mídias</div>
+                        
+                        <div class="gallery-items" id="editGalleryItems">
+                            <!-- Gallery items will be loaded here -->
+                        </div>
+                        
+                        <button type="button" class="add-gallery-btn" onclick="addEditGalleryItem()">
+                            + Adicionar Mídia
+                        </button>
+                    </div>
+
+                    <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+                        <button type="submit" class="btn btn-success" style="flex: 1;">Salvar Alterações</button>
+                        <button type="button" class="btn btn-secondary" onclick="closeEditModal()" style="flex: 1;">Cancelar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // =============================================================================
+        // GLOBAL VARIABLES
+        // =============================================================================
+        let isAdmin = localStorage.getItem('isVipAdmin') === 'true';
+        let allProducts = [];
+        let currentEditingProduct = null;
+
+        // API BASE URL
+        const API_BASE = window.location.hostname === 'localhost' ? 'http://localhost:3000' : '';
+
+        // =============================================================================
+        // UTILITY FUNCTIONS
+        // =============================================================================
         async function apiRequest(url, options = {}) {
             try {
-                const response = await fetch(url, {
+                const response = await fetch(API_BASE + url, {
                     headers: {
                         'Content-Type': 'application/json',
                         ...options.headers
@@ -572,152 +898,6 @@
                 console.error('API Error:', error);
                 throw error;
             }
-        }
-
-        // Admin Login
-        document.getElementById('adminLoginForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            const username = document.getElementById('usernameInput').value;
-            const password = document.getElementById('passwordInput').value;
-            const loginBtn = document.getElementById('adminLoginBtn');
-            const messageDiv = document.getElementById('loginMessage');
-            
-            // Clear previous messages
-            messageDiv.innerHTML = '';
-            
-            loginBtn.disabled = true;
-            loginBtn.textContent = 'VERIFICANDO...';
-            
-            try {
-                const result = await apiRequest('/api/admin/login', {
-                    method: 'POST',
-                    body: JSON.stringify({ username, password })
-                });
-                
-                if (result.success) {
-                    isAdmin = true;
-                    document.getElementById('adminLogin').style.display = 'none';
-                    document.getElementById('adminPanel').classList.add('active');
-                    await loadProducts();
-                } else {
-                    showMessage(result.error || 'Credenciais incorretas', 'error', messageDiv);
-                }
-            } catch (error) {
-                console.error('Login error:', error);
-                showMessage('Erro de conexão. Verifique se o servidor está rodando.', 'error', messageDiv);
-            }
-            
-            loginBtn.disabled = false;
-            loginBtn.textContent = 'ACESSAR PAINEL';
-        });
-
-        // Load products
-        async function loadProducts() {
-            try {
-                const result = await apiRequest('/api/products');
-                allProducts = result.products || [];
-                renderProductsList();
-            } catch (error) {
-                showMessage('Erro ao carregar produtos: ' + error.message, 'error');
-                // Show empty state instead of error
-                document.getElementById('productsList').innerHTML = 
-                    '<p style="text-align: center; color: #999; padding: 2rem;">Erro ao carregar produtos. Verifique a conexão.</p>';
-            }
-        }
-
-        // Render products list
-        function renderProductsList() {
-            const container = document.getElementById('productsList');
-            
-            if (allProducts.length === 0) {
-                container.innerHTML = '<p style="text-align: center; color: #999; padding: 2rem;">Nenhum produto cadastrado ainda.</p>';
-                return;
-            }
-            
-            container.innerHTML = allProducts.map(product => `
-                <div class="product-item">
-                    <div class="product-info">
-                        <h4>${product.name}</h4>
-                        <p>${getCategoryName(product.category)} • R$ ${(product.price || 0).toFixed(2)}</p>
-                        <p style="font-size: 0.8rem; color: #666;">
-                            Planos: ${[product.plano_1, product.plano_2, product.plano_3].filter(p => p).join(', ') || 'Nenhum'}
-                        </p>
-                    </div>
-                    <div class="product-actions">
-                        <button class="btn btn-danger" onclick="deleteProduct(${product.id})">Excluir</button>
-                    </div>
-                </div>
-            `).join('');
-        }
-
-        // Get category display name
-        function getCategoryName(category) {
-            const categories = {
-                'meus_produtos': 'Meus Produtos',
-                'mais_vendidos': 'Mais Vendidos',
-                'criadoras_conteudos': 'Criadoras de Conteúdos',
-                'chamadas_video': 'Chamadas de Vídeo',
-                'para_homens': 'Para Homens',
-                'fetiches': 'Fetiches'
-            };
-            return categories[category] || category;
-        }
-
-        // Add product form handler
-        document.getElementById('addProductForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            const formData = {
-                name: document.getElementById('productName').value,
-                description: document.getElementById('productDescription').value,
-                category: document.getElementById('productCategory').value,
-                banner_url: document.getElementById('productBannerUrl').value,
-                main_video: document.getElementById('productMainVideo').value,
-                access_url: document.getElementById('productAccessUrl').value,
-                buy_url: document.getElementById('productBuyUrl').value,
-                price: parseFloat(document.getElementById('productPrice').value) || 0,
-                plano_1: document.getElementById('plano1').value || null,
-                plano_2: document.getElementById('plano2').value || null,
-                plano_3: document.getElementById('plano3').value || null
-            };
-            
-            try {
-                showMessage('Adicionando produto...', 'info');
-                const result = await apiRequest('/api/products', {
-                    method: 'POST',
-                    body: JSON.stringify(formData)
-                });
-                
-                showMessage('Produto adicionado com sucesso!', 'success');
-                document.getElementById('addProductForm').reset();
-                await loadProducts();
-            } catch (error) {
-                showMessage('Erro ao adicionar produto: ' + error.message, 'error');
-            }
-        });
-
-        // Delete product
-        async function deleteProduct(productId) {
-            if (!confirm('Tem certeza que deseja excluir este produto? Esta ação não pode ser desfeita.')) return;
-            
-            try {
-                showMessage('Excluindo produto...', 'info');
-                await apiRequest(`/api/products/${productId}`, {
-                    method: 'DELETE'
-                });
-                
-                showMessage('Produto excluído com sucesso!', 'success');
-                await loadProducts();
-            } catch (error) {
-                showMessage('Erro ao excluir produto: ' + error.message, 'error');
-            }
-        }
-
-        // Logout
-        async function handleLogout() {
-            if (!confirm('Deseja realmente sair do painel administrativo?')) return;
-            location.reload();
         }
 
         // Message system
@@ -744,10 +924,443 @@
             }
         }
 
-        // Initialize
+        // =============================================================================
+        // ADMIN LOGIN & SESSION
+        // =============================================================================
         document.addEventListener('DOMContentLoaded', () => {
-            console.log('Admin panel loaded');
+            console.log('🚀 Admin panel loading...');
+            
+            // Check if already logged in
+            if (isAdmin) {
+                console.log('✅ Admin already logged in');
+                showAdminPanel();
+            } else {
+                console.log('❌ Admin not logged in');
+                showLoginScreen();
+            }
         });
+
+        function showLoginScreen() {
+            document.getElementById('adminLogin').style.display = 'flex';
+            document.getElementById('adminPanel').classList.remove('active');
+        }
+
+        function showAdminPanel() {
+            document.getElementById('adminLogin').style.display = 'none';
+            document.getElementById('adminPanel').classList.add('active');
+            loadProducts();
+            loadStats();
+        }
+
+        // Admin Login Form
+        document.getElementById('adminLoginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const username = document.getElementById('usernameInput').value;
+            const password = document.getElementById('passwordInput').value;
+            const loginBtn = document.getElementById('adminLoginBtn');
+            const messageDiv = document.getElementById('loginMessage');
+            
+            // Clear previous messages
+            messageDiv.innerHTML = '';
+            
+            loginBtn.disabled = true;
+            loginBtn.textContent = 'VERIFICANDO...';
+            
+            try {
+                const result = await apiRequest('/api/admin/login', {
+                    method: 'POST',
+                    body: JSON.stringify({ username, password })
+                });
+                
+                if (result.success) {
+                    console.log('✅ Admin login successful');
+                    isAdmin = true;
+                    localStorage.setItem('isVipAdmin', 'true');
+                    showAdminPanel();
+                } else {
+                    showMessage(result.error || 'Credenciais incorretas', 'error', messageDiv);
+                }
+            } catch (error) {
+                console.error('Login error:', error);
+                showMessage('Erro de conexão. Verifique se o servidor está rodando.', 'error', messageDiv);
+            }
+            
+            loginBtn.disabled = false;
+            loginBtn.textContent = 'ACESSAR PAINEL';
+        });
+
+        // Logout
+        async function handleLogout() {
+            if (!confirm('Deseja realmente sair do painel administrativo?')) return;
+            
+            localStorage.removeItem('isVipAdmin');
+            isAdmin = false;
+            location.reload();
+        }
+
+        // =============================================================================
+        // STATS LOADING
+        // =============================================================================
+        async function loadStats() {
+            try {
+                // Load total products
+                const productsResult = await apiRequest('/api/products');
+                const products = productsResult.products || [];
+                
+                document.getElementById('totalProducts').textContent = products.length;
+                document.getElementById('meusProducts').textContent = products.filter(p => p.category === 'meus_produtos').length;
+                document.getElementById('premiumProducts').textContent = products.filter(p => p.plano_1 || p.plano_2 || p.plano_3).length;
+                
+                // Load access stats
+                try {
+                    const accessResult = await apiRequest('/debug/access');
+                    document.getElementById('totalAccess').textContent = accessResult.access_records?.length || 0;
+                } catch {
+                    document.getElementById('totalAccess').textContent = '0';
+                }
+                
+            } catch (error) {
+                console.error('Error loading stats:', error);
+                // Set default values
+                document.getElementById('totalProducts').textContent = '0';
+                document.getElementById('totalAccess').textContent = '0';
+                document.getElementById('meusProducts').textContent = '0';
+                document.getElementById('premiumProducts').textContent = '0';
+            }
+        }
+
+        // =============================================================================
+        // PRODUCTS MANAGEMENT
+        // =============================================================================
+
+        // Load products
+        async function loadProducts() {
+            try {
+                console.log('📦 Loading products...');
+                const result = await apiRequest('/api/products');
+                allProducts = result.products || [];
+                console.log(`✅ Loaded ${allProducts.length} products`);
+                renderProductsList();
+                loadStats(); // Refresh stats
+            } catch (error) {
+                console.error('Error loading products:', error);
+                showMessage('Erro ao carregar produtos: ' + error.message, 'error');
+                document.getElementById('productsList').innerHTML = 
+                    '<p style="text-align: center; color: #999; padding: 2rem;">Erro ao carregar produtos. Verifique a conexão.</p>';
+            }
+        }
+
+        // Render products list
+        function renderProductsList() {
+            const container = document.getElementById('productsList');
+            
+            if (allProducts.length === 0) {
+                container.innerHTML = '<p style="text-align: center; color: #999; padding: 2rem;">Nenhum produto cadastrado ainda.</p>';
+                return;
+            }
+            
+            container.innerHTML = allProducts.map(product => `
+                <div class="product-item">
+                    <div class="product-info">
+                        <h4>${product.name}</h4>
+                        <p>${getCategoryName(product.category)} • R$ ${(product.price || 0).toFixed(2)}</p>
+                        <p style="font-size: 0.8rem; color: #666;">
+                            Planos: ${[product.plano_1, product.plano_2, product.plano_3].filter(p => p).join(', ') || 'Nenhum'}
+                        </p>
+                        <p style="font-size: 0.8rem; color: #666;">
+                            Galeria: ${(product.gallery && product.gallery.length) || 0} itens
+                        </p>
+                    </div>
+                    <div class="product-actions">
+                        <button class="btn btn-warning" onclick="openEditModal(${product.id})">Editar</button>
+                        <button class="btn btn-danger" onclick="deleteProduct(${product.id})">Excluir</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Get category display name
+        function getCategoryName(category) {
+            const categories = {
+                'meus_produtos': 'Meus Produtos',
+                'mais_vendidos': 'Mais Vendidos',
+                'criadoras_conteudos': 'Criadoras de Conteúdos',
+                'chamadas_video': 'Chamadas de Vídeo',
+                'para_homens': 'Para Homens',
+                'fetiches': 'Fetiches'
+            };
+            return categories[category] || category;
+        }
+
+        // =============================================================================
+        // ADD PRODUCT
+        // =============================================================================
+
+        // Gallery management for add form
+        function addGalleryItem() {
+            const container = document.getElementById('galleryItems');
+            const item = document.createElement('div');
+            item.className = 'gallery-item';
+            item.innerHTML = `
+                <select class="gallery-type">
+                    <option value="image">Imagem</option>
+                    <option value="video">Vídeo</option>
+                </select>
+                <input type="url" class="gallery-url" placeholder="https://exemplo.com/media.jpg">
+                <button type="button" class="btn btn-danger remove-gallery-item">Remover</button>
+            `;
+            
+            container.appendChild(item);
+            
+            // Add remove event listener
+            item.querySelector('.remove-gallery-item').addEventListener('click', () => {
+                item.remove();
+            });
+        }
+
+        // Add remove event listeners to existing gallery items
+        document.addEventListener('DOMContentLoaded', () => {
+            document.querySelectorAll('.remove-gallery-item').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.target.closest('.gallery-item').remove();
+                });
+            });
+        });
+
+        // Add product form handler
+        document.getElementById('addProductForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            // Collect gallery items
+            const galleryItems = [];
+            document.querySelectorAll('#galleryItems .gallery-item').forEach(item => {
+                const type = item.querySelector('.gallery-type').value;
+                const url = item.querySelector('.gallery-url').value.trim();
+                if (url) {
+                    galleryItems.push({ type, url });
+                }
+            });
+            
+            const formData = {
+                name: document.getElementById('productName').value,
+                description: document.getElementById('productDescription').value,
+                category: document.getElementById('productCategory').value,
+                banner_url: document.getElementById('productBannerUrl').value,
+                main_video: document.getElementById('productMainVideo').value,
+                access_url: document.getElementById('productAccessUrl').value,
+                buy_url: document.getElementById('productBuyUrl').value,
+                price: parseFloat(document.getElementById('productPrice').value) || 0,
+                plano_1: document.getElementById('plano1').value || null,
+                plano_2: document.getElementById('plano2').value || null,
+                plano_3: document.getElementById('plano3').value || null,
+                gallery: galleryItems
+            };
+            
+            try {
+                showMessage('Adicionando produto...', 'info');
+                const result = await apiRequest('/api/products', {
+                    method: 'POST',
+                    body: JSON.stringify(formData)
+                });
+                
+                showMessage('Produto adicionado com sucesso!', 'success');
+                document.getElementById('addProductForm').reset();
+                // Reset gallery to one empty item
+                document.getElementById('galleryItems').innerHTML = `
+                    <div class="gallery-item">
+                        <select class="gallery-type">
+                            <option value="image">Imagem</option>
+                            <option value="video">Vídeo</option>
+                        </select>
+                        <input type="url" class="gallery-url" placeholder="https://exemplo.com/media.jpg">
+                        <button type="button" class="btn btn-danger remove-gallery-item">Remover</button>
+                    </div>
+                `;
+                // Re-add event listener
+                document.querySelector('.remove-gallery-item').addEventListener('click', (e) => {
+                    if (document.querySelectorAll('.gallery-item').length > 1) {
+                        e.target.closest('.gallery-item').remove();
+                    }
+                });
+                
+                await loadProducts();
+            } catch (error) {
+                showMessage('Erro ao adicionar produto: ' + error.message, 'error');
+            }
+        });
+
+        // =============================================================================
+        // EDIT PRODUCT
+        // =============================================================================
+
+        // Open edit modal
+        async function openEditModal(productId) {
+            const product = allProducts.find(p => p.id == productId);
+            if (!product) {
+                showMessage('Produto não encontrado', 'error');
+                return;
+            }
+            
+            currentEditingProduct = product;
+            
+            // Fill form fields
+            document.getElementById('editProductId').value = product.id;
+            document.getElementById('editProductName').value = product.name || '';
+            document.getElementById('editProductDescription').value = product.description || '';
+            document.getElementById('editProductCategory').value = product.category || '';
+            document.getElementById('editProductBannerUrl').value = product.banner_url || '';
+            document.getElementById('editProductMainVideo').value = product.main_video || '';
+            document.getElementById('editProductAccessUrl').value = product.access_url || '';
+            document.getElementById('editProductBuyUrl').value = product.buy_url || '';
+            document.getElementById('editProductPrice').value = product.price || '';
+            document.getElementById('editPlano1').value = product.plano_1 || '';
+            document.getElementById('editPlano2').value = product.plano_2 || '';
+            document.getElementById('editPlano3').value = product.plano_3 || '';
+            
+            // Fill gallery
+            const editGalleryContainer = document.getElementById('editGalleryItems');
+            editGalleryContainer.innerHTML = '';
+            
+            if (product.gallery && product.gallery.length > 0) {
+                product.gallery.forEach(item => {
+                    addEditGalleryItem(item.type, item.url);
+                });
+            } else {
+                addEditGalleryItem();
+            }
+            
+            // Show modal
+            document.getElementById('editModal').style.display = 'flex';
+        }
+
+        // Close edit modal
+        function closeEditModal() {
+            document.getElementById('editModal').style.display = 'none';
+            currentEditingProduct = null;
+        }
+
+        // Gallery management for edit form
+        function addEditGalleryItem(type = 'image', url = '') {
+            const container = document.getElementById('editGalleryItems');
+            const item = document.createElement('div');
+            item.className = 'gallery-item';
+            item.innerHTML = `
+                <select class="gallery-type">
+                    <option value="image" ${type === 'image' ? 'selected' : ''}>Imagem</option>
+                    <option value="video" ${type === 'video' ? 'selected' : ''}>Vídeo</option>
+                </select>
+                <input type="url" class="gallery-url" placeholder="https://exemplo.com/media.jpg" value="${url}">
+                <button type="button" class="btn btn-danger remove-gallery-item">Remover</button>
+            `;
+            
+            container.appendChild(item);
+            
+            // Add remove event listener
+            item.querySelector('.remove-gallery-item').addEventListener('click', () => {
+                if (container.children.length > 1) {
+                    item.remove();
+                }
+            });
+        }
+
+        // Edit product form handler
+        document.getElementById('editProductForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const productId = document.getElementById('editProductId').value;
+            
+            // Collect gallery items
+            const galleryItems = [];
+            document.querySelectorAll('#editGalleryItems .gallery-item').forEach(item => {
+                const type = item.querySelector('.gallery-type').value;
+                const url = item.querySelector('.gallery-url').value.trim();
+                if (url) {
+                    galleryItems.push({ type, url });
+                }
+            });
+            
+            const formData = {
+                name: document.getElementById('editProductName').value,
+                description: document.getElementById('editProductDescription').value,
+                category: document.getElementById('editProductCategory').value,
+                banner_url: document.getElementById('editProductBannerUrl').value,
+                main_video: document.getElementById('editProductMainVideo').value,
+                access_url: document.getElementById('editProductAccessUrl').value,
+                buy_url: document.getElementById('editProductBuyUrl').value,
+                price: parseFloat(document.getElementById('editProductPrice').value) || 0,
+                plano_1: document.getElementById('editPlano1').value || null,
+                plano_2: document.getElementById('editPlano2').value || null,
+                plano_3: document.getElementById('editPlano3').value || null,
+                gallery: galleryItems
+            };
+            
+            try {
+                showMessage('Salvando alterações...', 'info');
+                const result = await apiRequest(`/api/products/${productId}`, {
+                    method: 'PUT',
+                    body: JSON.stringify(formData)
+                });
+                
+                showMessage('Produto atualizado com sucesso!', 'success');
+                closeEditModal();
+                await loadProducts();
+            } catch (error) {
+                showMessage('Erro ao atualizar produto: ' + error.message, 'error');
+            }
+        });
+
+        // =============================================================================
+        // DELETE PRODUCT
+        // =============================================================================
+
+        // Delete product
+        async function deleteProduct(productId) {
+            const product = allProducts.find(p => p.id == productId);
+            const productName = product ? product.name : `ID ${productId}`;
+            
+            if (!confirm(`Tem certeza que deseja excluir o produto "${productName}"?\n\nEsta ação não pode ser desfeita.`)) return;
+            
+            try {
+                showMessage('Excluindo produto...', 'info');
+                await apiRequest(`/api/products/${productId}`, {
+                    method: 'DELETE'
+                });
+                
+                showMessage('Produto excluído com sucesso!', 'success');
+                await loadProducts();
+            } catch (error) {
+                showMessage('Erro ao excluir produto: ' + error.message, 'error');
+            }
+        }
+
+        // =============================================================================
+        // EVENT LISTENERS
+        // =============================================================================
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const editModal = document.getElementById('editModal');
+            if (event.target === editModal) {
+                closeEditModal();
+            }
+        };
+
+        // Initialize remove gallery item listeners for the first item
+        document.addEventListener('DOMContentLoaded', () => {
+            // Add event listener to the first remove button
+            const firstRemoveBtn = document.querySelector('.remove-gallery-item');
+            if (firstRemoveBtn) {
+                firstRemoveBtn.addEventListener('click', (e) => {
+                    const galleryItems = document.querySelectorAll('#galleryItems .gallery-item');
+                    if (galleryItems.length > 1) {
+                        e.target.closest('.gallery-item').remove();
+                    }
+                });
+            }
+        });
+
+        console.log('🎉 Admin panel script loaded successfully!');
     </script>
 </body>
 </html>
