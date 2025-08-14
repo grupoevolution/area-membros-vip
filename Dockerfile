@@ -8,7 +8,7 @@ WORKDIR /app
 COPY package*.json ./
 
 # Install dependencies
-RUN npm ci --only=production
+RUN npm install --omit=dev
 
 # Copy application code
 COPY . .
@@ -26,10 +26,6 @@ USER nodejs
 
 # Expose port
 EXPOSE 3000
-
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD node -e "require('http').request('http://localhost:3000/api/products', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) }).end()"
 
 # Start the application
 CMD ["npm", "start"]
