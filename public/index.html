@@ -14,7 +14,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Membros VIP">
     <link rel="manifest" href="/manifest.json">
-    <link rel="icon" href="/favicon.ico">
+    <link rel="icon" href="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIiBmaWxsPSIjRTUwOTE0Ii8+Cjx0ZXh0IHg9IjE2IiB5PSIyMCIgZmlsbD0id2hpdGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZvbnQtc2l6ZT0iMTAiIGZvbnQtd2VpZ2h0PSJib2xkIj5WSVA8L3RleHQ+Cjwvc3ZnPg==">
     
     <style>
         :root {
@@ -41,6 +41,73 @@
             color: var(--text-color);
             overflow-x: hidden;
             padding-bottom: 70px;
+        }
+
+        /* PWA Install Banner */
+        .pwa-install-banner {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(135deg, var(--primary-color), #cc0000);
+            color: white;
+            padding: 12px 20px;
+            text-align: center;
+            z-index: 10000;
+            transform: translateY(-100%);
+            transition: transform 0.3s ease;
+            display: none;
+        }
+
+        .pwa-install-banner.show {
+            transform: translateY(0);
+            display: block;
+        }
+
+        .pwa-install-content {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            max-width: 400px;
+            margin: 0 auto;
+            gap: 15px;
+        }
+
+        .pwa-install-text {
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+
+        .pwa-install-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+        }
+
+        .pwa-install-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .pwa-close-btn {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.2rem;
+            cursor: pointer;
+            padding: 5px;
+            border-radius: 4px;
+            transition: background 0.3s ease;
+        }
+
+        .pwa-close-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
         }
 
         /* Login Screen */
@@ -151,63 +218,6 @@
             opacity: 0.6;
             cursor: not-allowed;
             transform: none;
-        }
-
-        /* PWA Install Banner */
-        .pwa-install-banner {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            background: linear-gradient(135deg, var(--primary-color), #cc0000);
-            color: white;
-            padding: 15px;
-            text-align: center;
-            z-index: 10000;
-            transform: translateY(-100%);
-            transition: transform 0.3s ease;
-        }
-
-        .pwa-install-banner.show {
-            transform: translateY(0);
-        }
-
-        .pwa-install-content {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            max-width: 400px;
-            margin: 0 auto;
-        }
-
-        .pwa-install-text {
-            font-size: 0.9rem;
-            font-weight: 600;
-        }
-
-        .pwa-install-btn {
-            background: rgba(255, 255, 255, 0.2);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            color: white;
-            padding: 8px 16px;
-            border-radius: 8px;
-            font-size: 0.8rem;
-            font-weight: bold;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .pwa-install-btn:hover {
-            background: rgba(255, 255, 255, 0.3);
-        }
-
-        .pwa-close-btn {
-            background: none;
-            border: none;
-            color: white;
-            font-size: 1.2rem;
-            cursor: pointer;
-            margin-left: 15px;
         }
 
         /* VIP Modal */
@@ -356,9 +366,9 @@
             display: block;
         }
 
-        /* Header */
+        /* Header - NOVA VERSÃO */
         header {
-            background: linear-gradient(180deg, rgba(0,0,0,0.9) 0%, rgba(20,20,20,0.5) 100%);
+            background: linear-gradient(180deg, rgba(0,0,0,0.95) 0%, rgba(20,20,20,0.8) 100%);
             padding: 1rem 4%;
             display: flex;
             justify-content: space-between;
@@ -369,14 +379,41 @@
             right: 0;
             z-index: 100;
             transition: background-color 0.3s ease;
+            border-bottom: 1px solid rgba(229, 9, 20, 0.3);
+        }
+        
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
         }
         
         .logo {
             font-family: 'Bebas Neue', sans-serif;
-            font-size: 2.5rem;
+            font-size: 2.2rem;
             font-weight: bold;
             color: var(--primary-color);
             letter-spacing: 2px;
+        }
+        
+        .vip-upgrade-btn {
+            background: linear-gradient(135deg, var(--primary-color), #cc0000);
+            color: white;
+            padding: 0.7rem 1.5rem;
+            border: none;
+            border-radius: 10px;
+            font-weight: bold;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            box-shadow: 0 4px 15px rgba(229, 9, 20, 0.3);
+        }
+
+        .vip-upgrade-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(229, 9, 20, 0.5);
         }
         
         .user-profile {
@@ -388,13 +425,14 @@
         .user-email {
             font-weight: 500;
             font-size: 0.9rem;
+            color: #ccc;
             display: none;
         }
         
         .logout-btn {
             width: 40px;
             height: 40px;
-            border-radius: 4px;
+            border-radius: 8px;
             background-color: rgba(255, 255, 255, 0.1);
             display: flex;
             align-items: center;
@@ -409,60 +447,9 @@
             transform: scale(1.05);
         }
 
-        /* Status Bar - REDUZIDA */
-        .status-bar {
-            background: linear-gradient(135deg, #333, #1a1a1a);
-            padding: 8px 4%;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            position: fixed;
-            top: 70px;
-            left: 0;
-            right: 0;
-            z-index: 99;
-            border-bottom: 1px solid #444;
-            gap: 20px;
-        }
-
-        .status-badge {
-            background: linear-gradient(135deg, #666, #555);
-            color: white;
-            padding: 6px 16px;
-            border-radius: 12px;
-            font-weight: bold;
-            font-size: 0.8rem;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-        .status-badge.vip {
-            background: linear-gradient(135deg, #FFD700, #FFA500);
-            color: #000;
-        }
-
-        .upgrade-btn {
-            background: linear-gradient(135deg, var(--primary-color), #cc0000);
-            color: white;
-            padding: 6px 16px;
-            border: none;
-            border-radius: 12px;
-            font-weight: bold;
-            font-size: 0.8rem;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-        .upgrade-btn:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 4px 15px rgba(229, 9, 20, 0.4);
-        }
-
         /* Main Content */
         main {
-            padding-top: 120px;
+            padding-top: 90px;
             min-height: 100vh;
             background-color: #000000;
         }
@@ -480,9 +467,11 @@
         .category-title {
             font-family: 'Bebas Neue', sans-serif;
             font-size: 1.8rem;
-            margin-bottom: 1rem;
+            margin-bottom: 1.5rem;
             letter-spacing: 1px;
             color: white;
+            border-left: 4px solid var(--primary-color);
+            padding-left: 1rem;
         }
         
         .module-grid {
@@ -503,21 +492,21 @@
         .module-card {
             flex: 0 0 auto;
             width: 200px;
-            height: 356px;
-            border-radius: 4px;
+            height: 300px;
+            border-radius: 8px;
             overflow: hidden;
             position: relative;
             cursor: pointer;
             background-color: var(--card-bg);
             transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
             transform-origin: center bottom;
-            box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.4);
         }
         
         .module-card:hover {
-            transform: scale(1.08);
+            transform: scale(1.05);
             z-index: 10;
-            box-shadow: 0 15px 30px rgba(0,0,0,0.6);
+            box-shadow: 0 15px 30px rgba(229, 9, 20, 0.3);
         }
         
         .module-thumbnail {
@@ -525,6 +514,33 @@
             height: 100%;
             object-fit: cover;
             transition: all 0.3s ease;
+        }
+        
+        .module-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(transparent, rgba(0,0,0,0.8));
+            padding: 1rem;
+            color: white;
+        }
+        
+        .module-title {
+            font-size: 0.9rem;
+            font-weight: bold;
+            margin-bottom: 0.3rem;
+        }
+        
+        .module-description {
+            font-size: 0.7rem;
+            color: #ccc;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .module-card:hover .module-description {
+            opacity: 1;
         }
         
         .locked-overlay {
@@ -726,19 +742,12 @@
             box-shadow: 0 4px 15px rgba(229, 9, 20, 0.3);
         }
         
-        .gallery-item img {
-            width: 100%;
-            height: auto;
-            display: block;
-            border-radius: 8px;
-        }
-
+        .gallery-item img,
         .gallery-item video {
             width: 100%;
             height: auto;
             display: block;
             border-radius: 8px;
-            background: #000;
         }
         
         .gallery-play-overlay {
@@ -828,10 +837,28 @@
             font-size: 1rem;
         }
 
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 3rem 2rem;
+            color: #666;
+        }
+
+        .empty-state svg {
+            width: 64px;
+            height: 64px;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+
         /* Responsive Design */
         @media (min-width: 768px) {
             .user-email {
                 display: block;
+            }
+            
+            .logo {
+                font-size: 2.5rem;
             }
         }
 
@@ -839,11 +866,29 @@
             .logo {
                 font-size: 2rem;
             }
+            
+            .vip-upgrade-btn {
+                padding: 0.6rem 1.2rem;
+                font-size: 0.8rem;
+            }
+            
+            .content-wrapper {
+                padding: 1.5rem 3%;
+            }
         }
 
         @media (max-width: 480px) {
             .logo {
                 font-size: 1.8rem;
+            }
+            
+            .header-left {
+                gap: 1rem;
+            }
+            
+            .vip-upgrade-btn {
+                padding: 0.5rem 1rem;
+                font-size: 0.75rem;
             }
         }
     </style>
@@ -852,7 +897,7 @@
     <!-- PWA Install Banner -->
     <div class="pwa-install-banner" id="pwaInstallBanner">
         <div class="pwa-install-content">
-            <span class="pwa-install-text">📱 Instalar App VIP na tela inicial</span>
+            <span class="pwa-install-text">📱 Instalar App VIP</span>
             <button class="pwa-install-btn" onclick="installPWA()">INSTALAR</button>
             <button class="pwa-close-btn" onclick="closePwaInstall()">&times;</button>
         </div>
@@ -906,8 +951,12 @@
 
     <!-- Main App -->
     <div class="main-app" id="mainApp">
+        <!-- Header - NOVA VERSÃO -->
         <header id="mainHeader">
-            <div class="logo">MEMBROS VIP</div>
+            <div class="header-left">
+                <div class="logo">MEMBROS VIP</div>
+                <button class="vip-upgrade-btn" onclick="showVipModal()">QUERO SER VIP</button>
+            </div>
             <div class="user-profile">
                 <span class="user-email" id="userEmail">usuário@email.com</span>
                 <button class="logout-btn" onclick="handleLogout()" title="Sair">
@@ -919,12 +968,6 @@
                 </button>
             </div>
         </header>
-
-        <!-- Status Bar -->
-        <div class="status-bar">
-            <span class="status-badge" id="statusBadge">FREE</span>
-            <button class="upgrade-btn" onclick="showVipModal()">QUERO SER VIP</button>
-        </div>
         
         <main>
             <div class="content-wrapper">
@@ -1043,74 +1086,32 @@
 
     <script>
         // =============================================================================
-        // GLOBAL VARIABLES - SISTEMA EM MEMÓRIA + SESSIONSTORAGE
+        // GLOBAL VARIABLES
         // =============================================================================
-        
-        // Dados persistentes (sobrevivem ao refresh)
-        let currentUser = sessionStorage.getItem('currentUser') || null;
-        let isLoggedIn = sessionStorage.getItem('isLoggedIn') === 'true';
-        
-        // Sistema em memória para controles temporários (resetam ao refresh)
-        let memoryStore = {
-            hasShownPwaPopup: false,
-            pwaLastShown: null,
-            vipModalLastShown: null,
-            userAccess: new Map(), // Map para acesso rápido: plano_code -> true/false
-            userAccessLoaded: false
-        };
-        
-        let deferredPrompt = null;
+        let currentUser = localStorage.getItem('currentUser');
+        let isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+        let hasShownPwaPopup = localStorage.getItem('hasShownPwaPopup') === 'true';
+        let hasShownVipModal = false; // Controle do modal VIP por sessão
+        let deferredPrompt;
 
         // API Base URL
         const API_BASE = window.location.hostname === 'localhost' ? 'http://localhost:3000' : '';
 
         // =============================================================================
-        // UTILITY FUNCTIONS - CONTROLE POR DATA
+        // PWA FUNCTIONALITY
         // =============================================================================
-        
-        function getTodayKey() {
-            return new Date().toISOString().split('T')[0]; // YYYY-MM-DD
-        }
-        
-        function shouldShowPwaToday() {
-            const today = getTodayKey();
-            const lastShown = sessionStorage.getItem('pwaLastShown');
-            return lastShown !== today;
-        }
-        
-        function shouldShowVipModalToday() {
-            const today = getTodayKey();
-            const lastShown = sessionStorage.getItem('vipModalLastShown');
-            return lastShown !== today;
-        }
-        
-        function markPwaShownToday() {
-            const today = getTodayKey();
-            sessionStorage.setItem('pwaLastShown', today);
-            memoryStore.pwaLastShown = today;
-            memoryStore.hasShownPwaPopup = true;
-        }
-        
-        function markVipModalShownToday() {
-            const today = getTodayKey();
-            sessionStorage.setItem('vipModalLastShown', today);
-            memoryStore.vipModalLastShown = today;
-        }
-
-        // =============================================================================
-        // PWA FUNCTIONALITY - COM CONTROLE DIÁRIO
-        // =============================================================================
-        
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/sw.js').catch(err => console.log('SW registration failed'));
+            navigator.serviceWorker.register('/sw.js')
+                .then(reg => console.log('✅ Service Worker registrado'))
+                .catch(err => console.log('❌ SW registration failed:', err));
         }
 
         window.addEventListener('beforeinstallprompt', (e) => {
             e.preventDefault();
             deferredPrompt = e;
             
-            // Só mostra 1x por dia E se estiver logado E não mostrou hoje
-            if (isLoggedIn && shouldShowPwaToday() && !memoryStore.hasShownPwaPopup) {
+            // Mostrar banner de instalação após 3 segundos se estiver logado
+            if (!hasShownPwaPopup && isLoggedIn) {
                 setTimeout(() => showPwaInstallBanner(), 3000);
             }
         });
@@ -1118,9 +1119,8 @@
         function showPwaInstallBanner() {
             const banner = document.getElementById('pwaInstallBanner');
             banner.classList.add('show');
-            markPwaShownToday();
-            
-            console.log('📱 PWA Banner mostrado - próximo: amanhã');
+            hasShownPwaPopup = true;
+            localStorage.setItem('hasShownPwaPopup', 'true');
         }
 
         function installPWA() {
@@ -1134,7 +1134,8 @@
                     closePwaInstall();
                 });
             } else {
-                alert('Para instalar:\n\n1. Toque no menu do navegador (⋮)\n2. Selecione "Adicionar à tela inicial"\n3. Confirme a instalação');
+                // Fallback para dispositivos que não suportam prompt automático
+                alert('Para instalar o app:\n\n📱 Android: Menu do navegador → "Adicionar à tela inicial"\n🍎 iOS: Botão compartilhar → "Adicionar à tela de início"');
                 closePwaInstall();
             }
         }
@@ -1145,9 +1146,8 @@
         }
 
         // =============================================================================
-        // LOGIN FUNCTIONALITY - COM CARREGAMENTO DE ACESSOS
+        // LOGIN FUNCTIONALITY
         // =============================================================================
-        
         document.addEventListener('DOMContentLoaded', function() {
             if (isLoggedIn && currentUser) {
                 autoLogin();
@@ -1157,7 +1157,7 @@
         document.getElementById('loginForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             
-            const email = document.getElementById('emailInput').value;
+            const email = document.getElementById('emailInput').value.trim();
             const stayConnected = document.getElementById('stayConnected').checked;
             
             if (email && email.includes('@')) {
@@ -1167,8 +1167,8 @@
                 
                 setTimeout(() => {
                     if (stayConnected) {
-                        sessionStorage.setItem('currentUser', email);
-                        sessionStorage.setItem('isLoggedIn', 'true');
+                        localStorage.setItem('currentUser', email);
+                        localStorage.setItem('isLoggedIn', 'true');
                     }
                     
                     currentUser = email;
@@ -1186,114 +1186,38 @@
             performLogin();
         }
 
-        async function performLogin() {
-            console.log('🚀 Realizando login para:', currentUser);
-            
+        function performLogin() {
             document.getElementById('loginScreen').style.display = 'none';
             document.getElementById('mainApp').classList.add('active');
             document.getElementById('userEmail').textContent = currentUser;
             
-            // Carregar acessos do usuário ANTES de carregar produtos
-            await loadUserAccess();
+            loadProducts();
             
-            // Carregar produtos
-            await loadProducts();
-            
-            // PWA banner (se necessário)
-            if (deferredPrompt && shouldShowPwaToday() && !memoryStore.hasShownPwaPopup) {
+            // Mostrar banner PWA se disponível
+            if (!hasShownPwaPopup && deferredPrompt) {
                 setTimeout(() => showPwaInstallBanner(), 2000);
             }
         }
 
         function handleLogout() {
             if (confirm('Deseja realmente sair?')) {
-                sessionStorage.removeItem('currentUser');
-                sessionStorage.removeItem('isLoggedIn');
+                localStorage.removeItem('currentUser');
+                localStorage.removeItem('isLoggedIn');
+                localStorage.removeItem('hasShownPwaPopup');
                 location.reload();
             }
         }
 
         // =============================================================================
-        // USER ACCESS MANAGEMENT - SISTEMA OTIMIZADO
+        // VIP MODAL FUNCTIONALITY
         // =============================================================================
-        
-        async function loadUserAccess() {
-            if (!currentUser || memoryStore.userAccessLoaded) {
-                return;
-            }
-            
-            console.log('🔐 Carregando acessos do usuário:', currentUser);
-            
-            try {
-                const response = await fetch(`${API_BASE}/debug/access/${encodeURIComponent(currentUser)}`);
-                const data = await response.json();
-                
-                if (data.access_records) {
-                    // Limpar acessos anteriores
-                    memoryStore.userAccess.clear();
-                    
-                    // Adicionar todos os planos com acesso ativo
-                    data.access_records.forEach(access => {
-                        if (access.status === 'active' && access.plan_code) {
-                            memoryStore.userAccess.set(access.plan_code, true);
-                            console.log(`✅ Acesso liberado: ${access.plan_code} (${access.plan_name || 'N/A'})`);
-                        }
-                    });
-                    
-                    console.log(`📊 Total de acessos carregados: ${memoryStore.userAccess.size}`);
-                    memoryStore.userAccessLoaded = true;
-                    
-                    // Atualizar status badge
-                    updateStatusBadge();
-                }
-            } catch (error) {
-                console.log('⚠️ Erro ao carregar acessos (usando modo offline):', error);
-                memoryStore.userAccessLoaded = true; // Marcar como carregado mesmo com erro
-            }
-        }
-        
-        function hasAccessToPlan(planCode) {
-            if (!planCode || !memoryStore.userAccessLoaded) {
-                return false;
-            }
-            return memoryStore.userAccess.has(planCode);
-        }
-        
-        function hasAccessToProduct(product) {
-            if (!product) return false;
-            
-            // Verificar se o usuário tem acesso a qualquer um dos planos do produto
-            const plans = [product.plano_1, product.plano_2, product.plano_3].filter(p => p);
-            
-            if (plans.length === 0) {
-                return true; // Produto sem planos = acesso livre
-            }
-            
-            return plans.some(plan => hasAccessToPlan(plan));
-        }
-        
-        function updateStatusBadge() {
-            const statusBadge = document.getElementById('statusBadge');
-            
-            if (memoryStore.userAccess.size > 0) {
-                statusBadge.textContent = 'VIP';
-                statusBadge.classList.add('vip');
-                console.log('👑 Status: VIP');
-            } else {
-                statusBadge.textContent = 'FREE';
-                statusBadge.classList.remove('vip');
-                console.log('🆓 Status: FREE');
-            }
-        }
-
-        // =============================================================================
-        // MODAL FUNCTIONALITY - COM CONTROLE DIÁRIO INTELIGENTE
-        // =============================================================================
-        
         function showVipModal() {
+            // Só mostra o modal se não foi mostrado ainda nesta sessão
+            if (!hasShownVipModal) {
+                hasShownVipModal = true;
+            }
             const modal = document.getElementById('vipModal');
             modal.style.display = 'flex';
-            markVipModalShownToday();
         }
 
         function closeVipModal() {
@@ -1301,31 +1225,56 @@
             modal.style.display = 'none';
         }
 
+        // =============================================================================
+        // PRODUCT MODAL FUNCTIONALITY
+        // =============================================================================
         async function openModal(product) {
-            console.log('🎬 Abrindo modal para:', product.name);
-            console.log('📋 Planos do produto:', [product.plano_1, product.plano_2, product.plano_3].filter(p => p));
+            console.log('🔍 Abrindo modal para produto:', product.name);
             
-            // Verificar se o produto tem planos configurados
+            // Verificar acesso se o produto tem planos configurados
             const planos = [product.plano_1, product.plano_2, product.plano_3].filter(p => p);
             
-            if (planos.length > 0) {
-                const hasAccess = hasAccessToProduct(product);
-                console.log('🔐 Tem acesso:', hasAccess);
+            if (planos.length > 0 && currentUser) {
+                console.log('🔒 Produto tem planos configurados:', planos);
+                let hasAccess = false;
+                
+                // Verificar acesso para qualquer um dos planos
+                for (const plano of planos) {
+                    try {
+                        console.log(`🔍 Verificando acesso para plano: ${plano}`);
+                        const response = await fetch(`${API_BASE}/api/check-access`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                email: currentUser,
+                                plano_code: plano
+                            })
+                        });
+                        
+                        const data = await response.json();
+                        console.log(`📊 Resultado da verificação:`, data);
+                        
+                        if (data.hasAccess) {
+                            hasAccess = true;
+                            console.log(`✅ Acesso liberado para plano: ${plano}`);
+                            break;
+                        }
+                    } catch (error) {
+                        console.error('❌ Erro ao verificar acesso:', error);
+                    }
+                }
                 
                 if (!hasAccess) {
-                    // Usuário não tem acesso
-                    if (shouldShowVipModalToday()) {
-                        console.log('📢 Primeira vez hoje - mostrando VIP modal');
-                        showVipModal();
-                    } else {
-                        console.log('🔄 VIP modal já foi mostrado hoje - abrindo direto');
-                        showVipModal();
-                    }
+                    console.log('❌ Usuário não tem acesso - Mostrando modal VIP');
+                    showVipModal();
                     return;
                 }
+            } else {
+                console.log('🔓 Produto livre ou sem planos configurados');
             }
             
-            // Usuário tem acesso ou produto é gratuito - abrir modal do produto
             console.log('✅ Abrindo modal do produto');
             
             const modal = document.getElementById('modalContent');
@@ -1338,6 +1287,8 @@
             const modalVideo = document.getElementById('modalVideo');
             if (product.main_video) {
                 modalVideo.src = product.main_video;
+            } else {
+                modalVideo.style.display = 'none';
             }
             
             // Set button action
@@ -1379,6 +1330,11 @@
             const galleryContainer = document.getElementById('mediaGallery');
             galleryContainer.innerHTML = '';
             
+            if (gallery.length === 0) {
+                galleryContainer.innerHTML = '<div class="empty-state">Nenhuma prévia disponível</div>';
+                return;
+            }
+            
             gallery.forEach((item) => {
                 const galleryItem = document.createElement('div');
                 galleryItem.className = 'gallery-item';
@@ -1402,7 +1358,7 @@
                         </div>
                     `;
                 } else {
-                    galleryItem.innerHTML = `<img src="${item.url}" alt="Prévia do conteúdo">`;
+                    galleryItem.innerHTML = `<img src="${item.url}" alt="Prévia do conteúdo" loading="lazy">`;
                 }
                 
                 galleryContainer.appendChild(galleryItem);
@@ -1413,6 +1369,7 @@
             const video = document.getElementById('modalVideo');
             video.src = videoUrl;
             video.load();
+            video.style.display = 'block';
         }
 
         function closeModal() {
@@ -1429,23 +1386,23 @@
         }
 
         // =============================================================================
-        // PRODUCTS FUNCTIONALITY - COM SISTEMA DE ACESSO INTEGRADO
+        // PRODUCTS FUNCTIONALITY
         // =============================================================================
-        
         async function loadProducts() {
             try {
+                console.log('📦 Carregando produtos...');
                 const response = await fetch(`${API_BASE}/api/products`);
                 const data = await response.json();
                 
                 if (data.success) {
-                    console.log('📦 Produtos carregados da API:', data.products.length);
+                    console.log(`✅ ${data.products.length} produtos carregados`);
                     renderProducts(data.products);
                 } else {
-                    console.log('⚠️ API retornou erro, usando dados mock');
+                    console.log('⚠️ API não retornou sucesso, usando dados mock');
                     renderMockProducts();
                 }
             } catch (error) {
-                console.log('⚠️ API indisponível, usando dados mock');
+                console.log('⚠️ API não disponível, usando dados mock');
                 renderMockProducts();
             }
         }
@@ -1484,7 +1441,6 @@
                 }
             ];
             
-            console.log('📦 Usando produtos mock:', mockProducts.length);
             renderProducts(mockProducts);
         }
 
@@ -1503,57 +1459,17 @@
                 if (container) container.innerHTML = '';
             });
 
-            // Separar produtos com e sem acesso
-            const productsWithAccess = [];
-            const productsWithoutAccess = [];
-            
-            products.forEach(product => {
-                if (hasAccessToProduct(product)) {
-                    productsWithAccess.push(product);
-                    console.log(`✅ ${product.name} - Acesso liberado`);
-                } else {
-                    productsWithoutAccess.push(product);
-                    console.log(`🔒 ${product.name} - Sem acesso`);
-                }
-            });
-
-            // **NOVA FUNCIONALIDADE: Produtos liberados vão automaticamente para "MEUS PRODUTOS"**
-            if (productsWithAccess.length > 0) {
-                const meusProdutosContainer = categories['meus_produtos'];
-                
-                productsWithAccess.forEach(product => {
-                    // Marcar produto como liberado
-                    product.isOwned = true;
-                    meusProdutosContainer.appendChild(createProductCard(product));
-                });
-                
-                console.log(`👑 ${productsWithAccess.length} produtos adicionados a "MEUS PRODUTOS"`);
-            }
-
-            // Group remaining products by their original category
+            // Group products by category
             const productsByCategory = {};
-            
-            // Adicionar produtos sem acesso nas categorias originais
-            productsWithoutAccess.forEach(product => {
-                const category = product.category || 'mais_vendidos';
+            products.forEach(product => {
+                const category = product.category || 'meus_produtos';
                 if (!productsByCategory[category]) {
                     productsByCategory[category] = [];
                 }
                 productsByCategory[category].push(product);
             });
-            
-            // Adicionar produtos com acesso nas categorias originais TAMBÉM (além de "meus_produtos")
-            productsWithAccess.forEach(product => {
-                const category = product.category || 'mais_vendidos';
-                if (category !== 'meus_produtos') { // Evitar duplicatas
-                    if (!productsByCategory[category]) {
-                        productsByCategory[category] = [];
-                    }
-                    productsByCategory[category].push(product);
-                }
-            });
 
-            // Render products in their original categories
+            // Render products in their categories
             Object.entries(productsByCategory).forEach(([category, categoryProducts]) => {
                 const container = categories[category];
                 if (container) {
@@ -1566,18 +1482,16 @@
             // Add empty message for empty categories
             Object.entries(categories).forEach(([category, container]) => {
                 if (container && container.children.length === 0) {
-                    if (category === 'meus_produtos') {
-                        container.innerHTML = '<div class="loading">🔓 Adquira produtos para vê-los aqui</div>';
-                    } else {
-                        container.innerHTML = '<div class="loading">Nenhum produto nesta categoria</div>';
-                    }
+                    container.innerHTML = `
+                        <div class="empty-state">
+                            <svg viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                            </svg>
+                            <p>Nenhum produto nesta categoria</p>
+                        </div>
+                    `;
                 }
             });
-            
-            console.log('📊 Resumo da renderização:');
-            console.log(`- Produtos com acesso: ${productsWithAccess.length}`);
-            console.log(`- Produtos sem acesso: ${productsWithoutAccess.length}`);
-            console.log(`- Total: ${products.length}`);
         }
 
         function createProductCard(product) {
@@ -1589,23 +1503,36 @@
             img.src = product.banner_url;
             img.alt = product.name;
             img.className = 'module-thumbnail';
+            img.loading = 'lazy';
+            
+            // Handle image load error
+            img.onerror = () => {
+                img.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjMwMCIgdmlld0JveD0iMCAwIDIwMCAzMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMzAwIiBmaWxsPSIjMzMzIi8+Cjx0ZXh0IHg9IjEwMCIgeT0iMTUwIiBmaWxsPSIjNjY2IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmb250LXNpemU9IjE0Ij5JbWFnZW0gbsOjbyBkaXNwb27DrXZlbDwvdGV4dD4KPC9zdmc+';
+            };
             
             card.appendChild(img);
             
-            // Adicionar lock overlay apenas se NÃO tiver acesso e tiver planos configurados
-            const hasPlans = [product.plano_1, product.plano_2, product.plano_3].some(p => p);
-            const hasAccess = hasAccessToProduct(product);
+            // Add overlay with title
+            const overlay = document.createElement('div');
+            overlay.className = 'module-overlay';
+            overlay.innerHTML = `
+                <div class="module-title">${product.name}</div>
+                <div class="module-description">${product.description.substring(0, 80)}...</div>
+            `;
+            card.appendChild(overlay);
             
-            if (hasPlans && !hasAccess && !product.isOwned) {
-                const overlay = document.createElement('div');
-                overlay.className = 'locked-overlay';
-                overlay.innerHTML = `
+            // Add lock overlay for premium products
+            const planos = [product.plano_1, product.plano_2, product.plano_3].filter(p => p);
+            if (planos.length > 0) {
+                const lockOverlay = document.createElement('div');
+                lockOverlay.className = 'locked-overlay';
+                lockOverlay.innerHTML = `
                     <svg class="lock-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <rect x="3" y="11" width="18" height="11" rx="2" ry="2" stroke="white" stroke-width="2"/>
                         <path d="M7 11V7C7 5.67392 7.52678 4.40215 8.46447 3.46447C9.40215 2.52678 10.6739 2 12 2C13.3261 2 14.5979 2.52678 15.5355 3.46447C16.4732 4.40215 17 5.67392 17 7V11" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                     </svg>
                 `;
-                card.appendChild(overlay);
+                card.appendChild(lockOverlay);
             }
             
             return card;
@@ -1614,11 +1541,13 @@
         // =============================================================================
         // NAVIGATION
         // =============================================================================
-        
         function navigate(section) {
+            // Remove active class from all nav items
             document.querySelectorAll('.nav-item').forEach(item => {
                 item.classList.remove('active');
             });
+            
+            // Add active class to clicked item
             event.currentTarget.classList.add('active');
             
             if (section !== 'conteudos') {
@@ -1631,6 +1560,7 @@
         // EVENT LISTENERS
         // =============================================================================
         
+        // Close modals when clicking outside
         window.onclick = function(event) {
             const productModal = document.getElementById('productModal');
             const vipModal = document.getElementById('vipModal');
@@ -1642,179 +1572,26 @@
                 closeVipModal();
             }
         };
-        
-        // =============================================================================
-        // DEBUG FUNCTIONS - PARA TESTES
-        // =============================================================================
-        
-   // Função para debug no console
-        window.debugVIP = {
-            showUserAccess: () => {
-                console.log('🔐 Acessos do usuário:', memoryStore.userAccess);
-                console.log('📊 Acessos carregados:', memoryStore.userAccessLoaded);
-                console.log('👤 Usuário atual:', currentUser);
-                return {
-                    userAccess: Array.from(memoryStore.userAccess.entries()),
-                    userAccessLoaded: memoryStore.userAccessLoaded,
-                    currentUser: currentUser
-                };
-            },
-            
-            clearAccess: () => {
-                memoryStore.userAccess.clear();
-                memoryStore.userAccessLoaded = false;
-                console.log('🧹 Acessos limpos');
-            },
-            
-            simulateAccess: (planCode) => {
-                memoryStore.userAccess.set(planCode, true);
-                updateStatusBadge();
-                console.log(`🔓 Acesso simulado para plano: ${planCode}`);
-                location.reload(); // Recarregar para ver mudanças
-            },
-            
-            showPwaPopup: () => {
-                showPwaInstallBanner();
-            },
-            
-            showVipPopup: () => {
-                showVipModal();
-            },
-            
-            resetDailyControls: () => {
-                sessionStorage.removeItem('pwaLastShown');
-                sessionStorage.removeItem('vipModalLastShown');
-                memoryStore.hasShownPwaPopup = false;
-                memoryStore.pwaLastShown = null;
-                memoryStore.vipModalLastShown = null;
-                console.log('🔄 Controles diários resetados');
-            }
-        };
-        
-        // Log de inicialização
-        console.log('🚀 VIP App inicializado');
-        console.log('📱 PWA suportado:', 'serviceWorker' in navigator);
-        console.log('👤 Usuário logado:', isLoggedIn);
-        console.log('📧 Email atual:', currentUser);
-        console.log('🎯 Modo:', window.location.hostname === 'localhost' ? 'Desenvolvimento' : 'Produção');
-        
-        // Para debug fácil no console
-        console.log('💡 Use debugVIP.* no console para testar funcionalidades');
-        
-        // =============================================================================
-        // HELPER FUNCTIONS - EXTRAS
-        // =============================================================================
-        
-        // Função para simular compra (desenvolvimento)
-        function simulatePurchase(planCode) {
-            if (!currentUser) {
-                alert('Faça login primeiro');
-                return;
-            }
-            
-            if (confirm(`Simular compra do plano ${planCode}?`)) {
-                fetch(`${API_BASE}/debug/simulate-access`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        email: currentUser,
-                        plan_code: planCode
-                    })
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        alert('✅ Acesso liberado com sucesso!');
-                        location.reload();
-                    } else {
-                        alert('❌ Erro ao liberar acesso');
-                    }
-                })
-                .catch(error => {
-                    console.error('Erro:', error);
-                    alert('❌ Erro de conexão');
-                });
-            }
-        }
-        
-        // Função para verificar status da API
-        async function checkAPIStatus() {
-            try {
-                const response = await fetch(`${API_BASE}/api/products`);
-                console.log('🌐 API Status:', response.ok ? 'Online' : 'Erro');
-                return response.ok;
-            } catch (error) {
-                console.log('🌐 API Status: Offline');
+
+        // Prevent multiple rapid clicks
+        let lastClickTime = 0;
+        document.addEventListener('click', function(e) {
+            const now = Date.now();
+            if (now - lastClickTime < 300) {
+                e.preventDefault();
                 return false;
             }
-        }
-        
-        // Verificar API no carregamento
-        document.addEventListener('DOMContentLoaded', () => {
-            setTimeout(checkAPIStatus, 1000);
+            lastClickTime = now;
         });
-        
-        // =============================================================================
-        // PERFORMANCE OPTIMIZATIONS
-        // =============================================================================
-        
-        // Lazy loading para imagens
-        const imageObserver = new IntersectionObserver((entries, observer) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    const img = entry.target;
-                    if (img.dataset.src) {
-                        img.src = img.dataset.src;
-                        img.removeAttribute('data-src');
-                        observer.unobserve(img);
-                    }
-                }
-            });
-        });
-        
-        // Aplicar lazy loading quando produtos forem renderizados
-        function applyLazyLoading() {
-            const lazyImages = document.querySelectorAll('img[data-src]');
-            lazyImages.forEach(img => imageObserver.observe(img));
-        }
-        
-        // =============================================================================
-        // ERROR HANDLING & FALLBACKS
-        // =============================================================================
-        
-        window.addEventListener('error', (e) => {
-            console.error('🚨 Erro JavaScript:', e.error);
-        });
-        
-        window.addEventListener('unhandledrejection', (e) => {
-            console.error('🚨 Promise rejeitada:', e.reason);
-        });
-        
-        // Fallback para navegadores antigos
-        if (!window.fetch) {
-            console.warn('⚠️ Fetch não suportado, usando fallback');
-            // Implementar fallback se necessário
-        }
-        
-        // =============================================================================
-        // FINAL INITIALIZATION
-        // =============================================================================
-        
-        // Garantir que tudo funcione mesmo se algum elemento não existir
-        function safeElementQuery(id, fallback = null) {
-            const element = document.getElementById(id);
-            if (!element) {
-                console.warn(`⚠️ Elemento #${id} não encontrado`);
-                return fallback;
+
+        // Handle PWA display mode
+        window.addEventListener('DOMContentLoaded', () => {
+            if (window.matchMedia('(display-mode: standalone)').matches) {
+                console.log('✅ App rodando em modo standalone (PWA)');
             }
-            return element;
-        }
-        
-        // Verificação final
-        console.log('✅ VIP App carregado completamente');
-        console.log('🎯 Pronto para uso!');
+        });
+
+        console.log('🚀 App VIP carregado com sucesso!');
     </script>
 </body>
 </html>
