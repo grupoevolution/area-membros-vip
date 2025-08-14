@@ -130,6 +130,91 @@ db.serialize(() => {
 });
 
 // =============================================================================
+// DEBUG ROUTES - PARA TESTAR O BANCO
+// =============================================================================
+
+// Rota para verificar produtos no banco
+app.get('/debug/products', (req, res) => {
+    db.all('SELECT * FROM products', [], (err, rows) => {
+        if (err) {
+            return res.status(500).json({ error: err.message });
+        }
+        res.json({ products: rows });
+    });
+});
+
+// Rota para verificar acessos no banco
+app.get('/debug/access', (req, res) => {
+    db.all('SELECT * FROM user_access ORDER BY created_at DESC', [], (err, rows) => {
+        if (err) {
+            return res.status(500).json({ error: err.message });
+        }
+        res.json({ access_records: rows });
+    });
+});
+
+// Rota para verificar acesso específico
+app.get('/debug/access/:email', (req, res) => {
+    const email = req.params.email;
+    
+    const query = `
+        SELECT ua.*, p.name as product_name, p.plano_1, p.plano_2, p.plano_3
+        FROM user_access ua
+        LEFT JOIN products p ON (p.plano_1 = ua.plan_code OR p.plano_2 = ua.plan_code OR p.plano_3 = ua.plan_code)
+        WHERE ua.email = ?
+        ORDER BY ua.created_at DESC
+    `;
+    
+    db.all(query, [email], (err, rows) => {
+        if (err) {
+            return res.status(500).json({ error: err.message });
+        }
+        res.json({ 
+            email,
+            access_records: rows,
+            total: rows.length
+        });
+    });
+});
+
+// Rota para simular webhook (para testes)
+app.post('/debug/simulate-access', (req, res) => {
+    const { email, plan_code } = req.body;
+    
+    if (!email || !plan_code) {
+        return res.status(400).json({ error: 'Email e plan_code são obrigatórios' });
+    }
+    
+    // Inserir acesso manualmente para teste
+    const insertQuery = `
+        INSERT INTO user_access 
+        (email, product_code, plan_code, plan_name, sale_amount, payment_id, status)
+        VALUES (?, ?, ?, ?, ?, ?, 'active')
+    `;
+    
+    db.run(insertQuery, [
+        email,
+        plan_code, // usando plan_code como product_code também
+        plan_code,
+        'Plano Teste',
+        99.99,
+        'TEST_' + Date.now()
+    ], function(err) {
+        if (err) {
+            console.error('❌ Erro ao inserir acesso:', err);
+            return res.status(500).json({ error: err.message });
+        }
+        
+        console.log(`✅ Acesso liberado manualmente: ${email} → ${plan_code}`);
+        res.json({ 
+            success: true, 
+            message: 'Acesso liberado para teste',
+            access_id: this.lastID
+        });
+    });
+});
+
+// =============================================================================
 // API ROUTES - PRODUCTS
 // =============================================================================
 
@@ -149,7 +234,7 @@ app.get('/api/products', (req, res) => {
     
     db.all(query, [], (err, rows) => {
         if (err) {
-            console.error(err);
+            console.error('❌ Erro ao buscar produtos:', err);
             return res.status(500).json({ success: false, error: 'Erro interno do servidor' });
         }
         
@@ -172,6 +257,7 @@ app.get('/api/products', (req, res) => {
             return product;
         });
         
+        console.log(`📦 Produtos carregados: ${products.length}`);
         res.json({ success: true, products });
     });
 });
@@ -240,10 +326,11 @@ app.post('/api/products', (req, res) => {
         plano_3 || null
     ], function(err) {
         if (err) {
-            console.error(err);
+            console.error('❌ Erro ao criar produto:', err);
             return res.status(500).json({ success: false, error: 'Erro ao criar produto' });
         }
         
+        console.log(`✅ Produto criado: ${name} (ID: ${this.lastID})`);
         res.json({ success: true, productId: this.lastID, message: 'Produto criado com sucesso!' });
     });
 });
@@ -255,7 +342,7 @@ app.delete('/api/products/:id', (req, res) => {
     // Delete product (cascade will handle media)
     db.run('DELETE FROM products WHERE id = ?', [productId], function(err) {
         if (err) {
-            console.error(err);
+            console.error('❌ Erro ao deletar produto:', err);
             return res.status(500).json({ success: false, error: 'Erro ao deletar produto' });
         }
         
@@ -263,20 +350,35 @@ app.delete('/api/products/:id', (req, res) => {
             return res.status(404).json({ success: false, error: 'Produto não encontrado' });
         }
         
+        console.log(`✅ Produto deletado: ID ${productId}`);
         res.json({ success: true, message: 'Produto deletado com sucesso!' });
     });
 });
 
 // =============================================================================
-// PERFECTPAY WEBHOOK & ACCESS CONTROL
+// PERFECTPAY WEBHOOK & ACCESS CONTROL - COM LOGS DETALHADOS
 // =============================================================================
 
-// Webhook PerfectPay - FORMATO REAL
+// Webhook PerfectPay - COM LOGS DETALHADOS
 app.post('/webhook/perfectpay', express.json(), (req, res) => {
+    console.log('\n🔔 ===== WEBHOOK PERFECTPAY RECEBIDO =====');
+    console.log('⏰ Timestamp:', new Date().toLocaleString('pt-BR'));
+    console.log('📄 Headers:', JSON.stringify(req.headers, null, 2));
+    console.log('📦 Body completo:', JSON.stringify(req.body, null, 2));
+    console.log('📦 Tipo do body:', typeof req.body);
+    console.log('📦 Keys do body:', Object.keys(req.body || {}));
+    
     try {
-        console.log('PerfectPay Webhook received:', JSON.stringify(req.body, null, 2));
-        
         const payload = req.body;
+        
+        // Log de cada propriedade importante
+        console.log('\n🔍 ANÁLISE DOS DADOS:');
+        console.log('- sale_status_enum_key:', payload.sale_status_enum_key);
+        console.log('- customer:', payload.customer);
+        console.log('- product:', payload.product);
+        console.log('- plan:', payload.plan);
+        console.log('- code:', payload.code);
+        console.log('- sale_amount:', payload.sale_amount);
         
         // Extrair dados do formato PerfectPay
         const {
@@ -288,9 +390,18 @@ app.post('/webhook/perfectpay', express.json(), (req, res) => {
             sale_amount
         } = payload;
         
+        console.log('\n📊 DADOS EXTRAÍDOS:');
+        console.log('- Status:', sale_status_enum_key);
+        console.log('- Email do cliente:', customer?.email);
+        console.log('- Código do plano:', plan?.code);
+        console.log('- Nome do plano:', plan?.name);
+        console.log('- Valor da venda:', sale_amount);
+        console.log('- Código da venda:', sale_code);
+        
         // Verificar se o pagamento foi aprovado
         if (sale_status_enum_key !== 'approved') {
-            console.log(`Status não aprovado: ${sale_status_enum_key}`);
+            console.log(`❌ Status não aprovado: ${sale_status_enum_key}`);
+            console.log('============================================\n');
             return res.json({ success: true, message: 'Status não processado' });
         }
         
@@ -298,12 +409,21 @@ app.post('/webhook/perfectpay', express.json(), (req, res) => {
         const plan_code = plan?.code;
         const plan_name = plan?.name;
         
+        console.log('\n✅ PAGAMENTO APROVADO!');
+        console.log('- Email:', email);
+        console.log('- Plano code:', plan_code);
+        console.log('- Plano name:', plan_name);
+        
         if (!email || !plan_code) {
-            console.log('Dados obrigatórios faltando:', { email, plan_code });
+            console.log('❌ Dados obrigatórios faltando!');
+            console.log('- Email presente:', !!email);
+            console.log('- Plan code presente:', !!plan_code);
+            console.log('============================================\n');
             return res.status(400).json({ success: false, error: 'Email e código do plano são obrigatórios' });
         }
         
         // Verificar se algum produto tem esse plano configurado
+        console.log('\n🔍 BUSCANDO PRODUTO COM PLANO:', plan_code);
         const query = `
             SELECT * FROM products 
             WHERE plano_1 = ? OR plano_2 = ? OR plano_3 = ?
@@ -312,53 +432,87 @@ app.post('/webhook/perfectpay', express.json(), (req, res) => {
         
         db.get(query, [plan_code, plan_code, plan_code], (err, product_row) => {
             if (err) {
-                console.error('Erro ao buscar produto:', err);
+                console.error('❌ Erro ao buscar produto:', err);
+                console.log('============================================\n');
                 return res.status(500).json({ success: false, error: 'Erro interno' });
             }
             
+            console.log('📦 Produto encontrado:', product_row);
             const product_code = product_row?.id || plan_code;
             
-            // Liberar acesso
-            const insertQuery = `
-                INSERT INTO user_access 
-                (email, product_code, plan_code, plan_name, sale_amount, payment_id, status)
-                VALUES (?, ?, ?, ?, ?, ?, 'active')
+            // Verificar se já existe acesso para este email/plano
+            const checkQuery = `
+                SELECT * FROM user_access 
+                WHERE email = ? AND plan_code = ?
+                ORDER BY created_at DESC
+                LIMIT 1
             `;
             
-            db.run(insertQuery, [
-                email,
-                product_code,
-                plan_code,
-                plan_name,
-                sale_amount,
-                sale_code
-            ], function(err) {
+            db.get(checkQuery, [email, plan_code], (err, existing) => {
                 if (err) {
-                    console.error('Erro ao liberar acesso:', err);
-                    return res.status(500).json({ success: false, error: 'Erro interno' });
+                    console.error('❌ Erro ao verificar acesso existente:', err);
                 }
                 
-                console.log(`✅ Acesso liberado: ${email} → Plano: ${plan_code} (${plan_name})`);
-                res.json({ 
-                    success: true, 
-                    message: 'Acesso liberado com sucesso',
-                    access_id: this.lastID,
-                    plan: plan_name
+                console.log('🔄 Acesso existente:', existing);
+                
+                // Liberar acesso
+                console.log('\n🔓 LIBERANDO ACESSO...');
+                const insertQuery = `
+                    INSERT INTO user_access 
+                    (email, product_code, plan_code, plan_name, sale_amount, payment_id, status)
+                    VALUES (?, ?, ?, ?, ?, ?, 'active')
+                `;
+                
+                db.run(insertQuery, [
+                    email,
+                    product_code,
+                    plan_code,
+                    plan_name,
+                    sale_amount,
+                    sale_code
+                ], function(err) {
+                    if (err) {
+                        console.error('❌ Erro ao liberar acesso:', err);
+                        console.log('============================================\n');
+                        return res.status(500).json({ success: false, error: 'Erro interno' });
+                    }
+                    
+                    console.log(`✅ SUCESSO! Acesso liberado:`);
+                    console.log(`- ID do acesso: ${this.lastID}`);
+                    console.log(`- Email: ${email}`);
+                    console.log(`- Plano: ${plan_code} (${plan_name})`);
+                    console.log(`- Produto: ${product_code}`);
+                    console.log('============================================\n');
+                    
+                    res.json({ 
+                        success: true, 
+                        message: 'Acesso liberado com sucesso',
+                        access_id: this.lastID,
+                        plan: plan_name,
+                        email: email,
+                        plan_code: plan_code
+                    });
                 });
             });
         });
         
     } catch (error) {
-        console.error('Erro no webhook PerfectPay:', error);
+        console.error('❌ ERRO CRÍTICO no webhook:', error);
+        console.log('============================================\n');
         res.status(400).json({ success: false, error: 'Dados inválidos' });
     }
 });
 
-// Verificar acesso do usuário a um produto específico - POR PLANO
+// Verificar acesso do usuário a um produto específico - POR PLANO - COM LOGS
 app.post('/api/check-access', (req, res) => {
     const { email, plano_code } = req.body;
     
+    console.log('\n🔍 VERIFICANDO ACESSO:');
+    console.log('- Email:', email);
+    console.log('- Plano code:', plano_code);
+    
     if (!email || !plano_code) {
+        console.log('❌ Dados obrigatórios faltando');
         return res.status(400).json({ success: false, error: 'Email e código do plano são obrigatórios' });
     }
     
@@ -374,18 +528,36 @@ app.post('/api/check-access', (req, res) => {
     
     db.get(query, [email, plano_code], (err, row) => {
         if (err) {
-            console.error('Erro ao verificar acesso:', err);
+            console.error('❌ Erro ao verificar acesso:', err);
             return res.status(500).json({ success: false, error: 'Erro interno' });
         }
         
+        console.log('📊 Resultado da consulta:', row);
+        
         if (row) {
+            console.log(`✅ ACESSO LIBERADO para ${email} no plano ${plano_code}`);
             res.json({ 
                 success: true, 
                 hasAccess: true, 
                 access: row,
-                message: `Acesso liberado - Plano: ${row.plan_name}`
+                message: `Acesso liberado - Plano: ${row.plan_name || plano_code}`
             });
         } else {
+            console.log(`❌ ACESSO NEGADO para ${email} no plano ${plano_code}`);
+            
+            // Verificar se existe ALGUM acesso para este email
+            db.all('SELECT * FROM user_access WHERE email = ?', [email], (err, allAccess) => {
+                if (!err && allAccess.length > 0) {
+                    console.log(`📋 Acessos encontrados para ${email}:`, allAccess.map(a => ({
+                        plan_code: a.plan_code,
+                        plan_name: a.plan_name,
+                        created_at: a.created_at
+                    })));
+                } else {
+                    console.log(`📭 Nenhum acesso encontrado para ${email}`);
+                }
+            });
+            
             res.json({ 
                 success: true, 
                 hasAccess: false, 
@@ -499,6 +671,11 @@ app.get('/painel-x7k2m9', (req, res) => {
                     <h1>Painel em Manutenção</h1>
                     <p>O arquivo admin.html não foi encontrado.</p>
                     <p>Certifique-se de que o arquivo está em: public/admin.html</p>
+                    
+                    <h2>Debug Routes:</h2>
+                    <p><a href="/debug/products" style="color: #E50914;">Ver Produtos</a></p>
+                    <p><a href="/debug/access" style="color: #E50914;">Ver Acessos</a></p>
+                    <p><a href="/debug/access/cauapetry2006@gmail.com" style="color: #E50914;">Ver Acesso do Cauan</a></p>
                 </body>
                 </html>
             `);
@@ -535,7 +712,12 @@ app.get('/', (req, res) => {
                 <body>
                     <h1>Membros VIP - Em Desenvolvimento</h1>
                     <p>O arquivo index.html não foi encontrado.</p>
-                    <a href="/painel-x7k2m9" style="color: #E50914;">Acessar Painel Admin</a>
+                    <p>Coloque o arquivo index.html na pasta public/</p>
+                    
+                    <h2>Links Úteis:</h2>
+                    <p><a href="/painel-x7k2m9" style="color: #E50914;">Acessar Painel Admin</a></p>
+                    <p><a href="/debug/products" style="color: #E50914;">Ver Produtos (Debug)</a></p>
+                    <p><a href="/debug/access" style="color: #E50914;">Ver Acessos (Debug)</a></p>
                 </body>
                 </html>
             `);
@@ -563,6 +745,12 @@ app.listen(PORT, () => {
     console.log(`⚙️  Painel admin: http://localhost:${PORT}/painel-x7k2m9`);
     console.log(`📊 API: http://localhost:${PORT}/api/products`);
     console.log(`🔌 Webhook: http://localhost:${PORT}/webhook/perfectpay`);
+    console.log(`🐛 Debug produtos: http://localhost:${PORT}/debug/products`);
+    console.log(`🐛 Debug acessos: http://localhost:${PORT}/debug/access`);
+    console.log(`🐛 Testar acesso Cauan: http://localhost:${PORT}/debug/access/cauapetry2006@gmail.com`);
+    console.log(`\n📝 Para testar manualmente:`);
+    console.log(`   POST /debug/simulate-access`);
+    console.log(`   { "email": "cauapetry2006@gmail.com", "plan_code": "PPLQQLST6" }`);
 });
 
 // Graceful shutdown
