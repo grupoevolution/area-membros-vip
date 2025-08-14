@@ -43,71 +43,135 @@
             padding-bottom: 70px;
         }
 
-        /* PWA Install Banner */
-        .pwa-install-banner {
+        /* PWA Install Popup Modal */
+        .pwa-install-popup {
             position: fixed;
             top: 0;
             left: 0;
             right: 0;
-            background: linear-gradient(135deg, var(--primary-color), #cc0000);
-            color: white;
-            padding: 12px 20px;
-            text-align: center;
-            z-index: 10000;
-            transform: translateY(-100%);
-            transition: transform 0.3s ease;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.9);
             display: none;
-        }
-
-        .pwa-install-banner.show {
-            transform: translateY(0);
-            display: block;
-        }
-
-        .pwa-install-content {
-            display: flex;
+            justify-content: center;
             align-items: center;
-            justify-content: space-between;
-            max-width: 400px;
-            margin: 0 auto;
-            gap: 15px;
+            z-index: 10002;
+            backdrop-filter: blur(8px);
         }
 
-        .pwa-install-text {
-            font-size: 0.9rem;
-            font-weight: 600;
+        .pwa-install-popup-content {
+            background: linear-gradient(145deg, #2a2a2a, #1a1a1a);
+            padding: 2.5rem 2rem;
+            border-radius: 20px;
+            text-align: center;
+            max-width: 380px;
+            width: 90%;
+            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.8);
+            border: 1px solid #333;
+            position: relative;
         }
 
-        .pwa-install-btn {
-            background: rgba(255, 255, 255, 0.2);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            color: white;
+        .pwa-badge {
+            position: absolute;
+            top: -10px;
+            right: 20px;
+            background: linear-gradient(135deg, #FFD700, #FFA500);
+            color: #000;
             padding: 8px 16px;
-            border-radius: 8px;
+            border-radius: 20px;
             font-size: 0.8rem;
             font-weight: bold;
+            letter-spacing: 1px;
+        }
+
+        .close-pwa-popup {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            color: #ccc;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            font-size: 1.5rem;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: all 0.3s ease;
+        }
+
+        .close-pwa-popup:hover {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+        }
+
+        .pwa-app-icon {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, var(--primary-color), #cc0000);
+            border-radius: 20px;
+            margin: 0 auto 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 10px 25px rgba(229, 9, 20, 0.3);
+        }
+
+        .pwa-install-popup h3 {
+            color: white;
+            font-size: 1.8rem;
+            margin-bottom: 1rem;
+            font-family: 'Bebas Neue', sans-serif;
+            letter-spacing: 1px;
+        }
+
+        .pwa-install-popup p {
+            margin-bottom: 2rem;
+            color: #aaa;
+            line-height: 1.6;
+            font-size: 0.95rem;
+        }
+
+        .btn-pwa-install {
+            background: linear-gradient(135deg, var(--primary-color), #cc0000);
+            color: white;
+            padding: 1rem 2rem;
+            border: none;
+            border-radius: 12px;
+            font-weight: bold;
+            font-size: 1.1rem;
             cursor: pointer;
             transition: all 0.3s ease;
-            white-space: nowrap;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 1rem;
+            width: 100%;
         }
 
-        .pwa-install-btn:hover {
-            background: rgba(255, 255, 255, 0.3);
+        .btn-pwa-install:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(229, 9, 20, 0.4);
         }
 
-        .pwa-close-btn {
-            background: none;
-            border: none;
-            color: white;
-            font-size: 1.2rem;
+        .btn-pwa-later {
+            background: transparent;
+            color: #888;
+            padding: 0.8rem 2rem;
+            border: 1px solid #444;
+            border-radius: 12px;
+            font-weight: 600;
             cursor: pointer;
-            padding: 5px;
-            border-radius: 4px;
-            transition: background 0.3s ease;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            width: 100%;
         }
 
-        .pwa-close-btn:hover {
-            background: rgba(255, 255, 255, 0.2);
+        .btn-pwa-later:hover {
+            background: rgba(255, 255, 255, 0.05);
+            color: #ccc;
+            border-color: #666;
         }
 
         /* Login Screen */
@@ -894,12 +958,23 @@
     </style>
 </head>
 <body>
-    <!-- PWA Install Banner -->
-    <div class="pwa-install-banner" id="pwaInstallBanner">
-        <div class="pwa-install-content">
-            <span class="pwa-install-text">📱 Instalar App VIP</span>
-            <button class="pwa-install-btn" onclick="installPWA()">INSTALAR</button>
-            <button class="pwa-close-btn" onclick="closePwaInstall()">&times;</button>
+    <!-- PWA Install Popup Modal -->
+    <div class="pwa-install-popup" id="pwaInstallPopup">
+        <div class="pwa-install-popup-content">
+            <div class="pwa-badge">VIP</div>
+            <button class="close-pwa-popup" onclick="closePwaPopup()">&times;</button>
+            
+            <div class="pwa-app-icon">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="white">
+                    <path d="M12 2L13.09 8.26L22 9L17 14L18.18 22L12 19L5.82 22L7 14L2 9L10.91 8.26L12 2Z"/>
+                </svg>
+            </div>
+            
+            <h3>INSTALAR APP VIP</h3>
+            <p>Instale nosso app para ter uma experiência mais rápida, sigilosa e com acesso completo, mesmo offline!</p>
+            
+            <button class="btn-pwa-install" onclick="installPWAFromPopup()">INSTALAR</button>
+            <button class="btn-pwa-later" onclick="closePwaPopup()">AGORA NÃO</button>
         </div>
     </div>
 
@@ -1091,6 +1166,7 @@
         let currentUser = localStorage.getItem('currentUser');
         let isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
         let hasShownPwaPopup = localStorage.getItem('hasShownPwaPopup') === 'true';
+        let lastPwaPopupDate = localStorage.getItem('lastPwaPopupDate');
         let deferredPrompt;
 
         // API Base URL
@@ -1111,16 +1187,37 @@
             console.log('📱 PWA install prompt disponível');
         });
 
-        function showPwaInstallBanner() {
-            console.log('📱 Mostrando banner PWA');
-            const banner = document.getElementById('pwaInstallBanner');
-            banner.classList.add('show');
-            hasShownPwaPopup = true;
-            localStorage.setItem('hasShownPwaPopup', 'true');
+        function shouldShowPwaPopup() {
+            const today = new Date().toDateString();
+            
+            // Se nunca mostrou OU é um novo dia
+            if (!hasShownPwaPopup || lastPwaPopupDate !== today) {
+                return true;
+            }
+            
+            return false;
         }
 
-        function installPWA() {
-            console.log('📱 Tentando instalar PWA');
+        function showPwaPopup() {
+            if (!shouldShowPwaPopup()) {
+                console.log('📱 PWA popup já foi mostrado hoje');
+                return;
+            }
+            
+            console.log('📱 Mostrando popup PWA');
+            const popup = document.getElementById('pwaInstallPopup');
+            popup.style.display = 'flex';
+            
+            // Marcar como mostrado hoje
+            const today = new Date().toDateString();
+            localStorage.setItem('hasShownPwaPopup', 'true');
+            localStorage.setItem('lastPwaPopupDate', today);
+            hasShownPwaPopup = true;
+            lastPwaPopupDate = today;
+        }
+
+        function installPWAFromPopup() {
+            console.log('📱 Tentando instalar PWA do popup');
             if (deferredPrompt) {
                 deferredPrompt.prompt();
                 deferredPrompt.userChoice.then((choiceResult) => {
@@ -1130,18 +1227,18 @@
                         console.log('❌ PWA instalação cancelada');
                     }
                     deferredPrompt = null;
-                    closePwaInstall();
+                    closePwaPopup();
                 });
             } else {
                 // Fallback para dispositivos que não suportam prompt automático
                 alert('Para instalar o app:\n\n📱 Android: Menu do navegador → "Adicionar à tela inicial"\n🍎 iOS: Botão compartilhar → "Adicionar à tela de início"');
-                closePwaInstall();
+                closePwaPopup();
             }
         }
 
-        function closePwaInstall() {
-            const banner = document.getElementById('pwaInstallBanner');
-            banner.classList.remove('show');
+        function closePwaPopup() {
+            const popup = document.getElementById('pwaInstallPopup');
+            popup.style.display = 'none';
         }
 
         // =============================================================================
@@ -1505,7 +1602,17 @@
         function createProductCard(product) {
             const card = document.createElement('div');
             card.className = 'module-card';
-            card.onclick = () => openModal(product);
+            card.onclick = () => {
+                // Primeiro abrir o modal
+                openModal(product);
+                
+                // Depois verificar se deve mostrar popup PWA
+                setTimeout(() => {
+                    if (shouldShowPwaPopup()) {
+                        showPwaPopup();
+                    }
+                }, 1000);
+            };
             
             const img = document.createElement('img');
             img.src = product.banner_url;
@@ -1572,12 +1679,16 @@
         window.onclick = function(event) {
             const productModal = document.getElementById('productModal');
             const vipModal = document.getElementById('vipModal');
+            const pwaPopup = document.getElementById('pwaInstallPopup');
             
             if (event.target === productModal) {
                 closeModal();
             }
             if (event.target === vipModal) {
                 closeVipModal();
+            }
+            if (event.target === pwaPopup) {
+                closePwaPopup();
             }
         };
 
