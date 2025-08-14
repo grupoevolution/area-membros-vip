@@ -1043,20 +1043,64 @@
 
     <script>
         // =============================================================================
-        // GLOBAL VARIABLES
+        // GLOBAL VARIABLES - SISTEMA EM MEMÓRIA + SESSIONSTORAGE
         // =============================================================================
-        let currentUser = localStorage.getItem('currentUser');
-        let isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
-        let hasShownPwaPopup = localStorage.getItem('hasShownPwaPopup') === 'true';
-        let hasShownFirstClick = localStorage.getItem('hasShownFirstClick') === 'true';
-        let deferredPrompt;
+        
+        // Dados persistentes (sobrevivem ao refresh)
+        let currentUser = sessionStorage.getItem('currentUser') || null;
+        let isLoggedIn = sessionStorage.getItem('isLoggedIn') === 'true';
+        
+        // Sistema em memória para controles temporários (resetam ao refresh)
+        let memoryStore = {
+            hasShownPwaPopup: false,
+            pwaLastShown: null,
+            vipModalLastShown: null,
+            userAccess: new Map(), // Map para acesso rápido: plano_code -> true/false
+            userAccessLoaded: false
+        };
+        
+        let deferredPrompt = null;
 
-        // API Base URL - Altere para seu domínio em produção
+        // API Base URL
         const API_BASE = window.location.hostname === 'localhost' ? 'http://localhost:3000' : '';
 
         // =============================================================================
-        // PWA FUNCTIONALITY
+        // UTILITY FUNCTIONS - CONTROLE POR DATA
         // =============================================================================
+        
+        function getTodayKey() {
+            return new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+        }
+        
+        function shouldShowPwaToday() {
+            const today = getTodayKey();
+            const lastShown = sessionStorage.getItem('pwaLastShown');
+            return lastShown !== today;
+        }
+        
+        function shouldShowVipModalToday() {
+            const today = getTodayKey();
+            const lastShown = sessionStorage.getItem('vipModalLastShown');
+            return lastShown !== today;
+        }
+        
+        function markPwaShownToday() {
+            const today = getTodayKey();
+            sessionStorage.setItem('pwaLastShown', today);
+            memoryStore.pwaLastShown = today;
+            memoryStore.hasShownPwaPopup = true;
+        }
+        
+        function markVipModalShownToday() {
+            const today = getTodayKey();
+            sessionStorage.setItem('vipModalLastShown', today);
+            memoryStore.vipModalLastShown = today;
+        }
+
+        // =============================================================================
+        // PWA FUNCTIONALITY - COM CONTROLE DIÁRIO
+        // =============================================================================
+        
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/sw.js').catch(err => console.log('SW registration failed'));
         }
@@ -1065,7 +1109,8 @@
             e.preventDefault();
             deferredPrompt = e;
             
-            if (!hasShownPwaPopup && isLoggedIn) {
+            // Só mostra 1x por dia E se estiver logado E não mostrou hoje
+            if (isLoggedIn && shouldShowPwaToday() && !memoryStore.hasShownPwaPopup) {
                 setTimeout(() => showPwaInstallBanner(), 3000);
             }
         });
@@ -1073,8 +1118,9 @@
         function showPwaInstallBanner() {
             const banner = document.getElementById('pwaInstallBanner');
             banner.classList.add('show');
-            hasShownPwaPopup = true;
-            localStorage.setItem('hasShownPwaPopup', 'true');
+            markPwaShownToday();
+            
+            console.log('📱 PWA Banner mostrado - próximo: amanhã');
         }
 
         function installPWA() {
@@ -1082,7 +1128,7 @@
                 deferredPrompt.prompt();
                 deferredPrompt.userChoice.then((choiceResult) => {
                     if (choiceResult.outcome === 'accepted') {
-                        console.log('PWA installed successfully');
+                        console.log('✅ PWA instalado com sucesso');
                     }
                     deferredPrompt = null;
                     closePwaInstall();
@@ -1099,8 +1145,9 @@
         }
 
         // =============================================================================
-        // LOGIN FUNCTIONALITY
+        // LOGIN FUNCTIONALITY - COM CARREGAMENTO DE ACESSOS
         // =============================================================================
+        
         document.addEventListener('DOMContentLoaded', function() {
             if (isLoggedIn && currentUser) {
                 autoLogin();
@@ -1120,8 +1167,8 @@
                 
                 setTimeout(() => {
                     if (stayConnected) {
-                        localStorage.setItem('currentUser', email);
-                        localStorage.setItem('isLoggedIn', 'true');
+                        sessionStorage.setItem('currentUser', email);
+                        sessionStorage.setItem('isLoggedIn', 'true');
                     }
                     
                     currentUser = email;
@@ -1139,32 +1186,114 @@
             performLogin();
         }
 
-        function performLogin() {
+        async function performLogin() {
+            console.log('🚀 Realizando login para:', currentUser);
+            
             document.getElementById('loginScreen').style.display = 'none';
             document.getElementById('mainApp').classList.add('active');
             document.getElementById('userEmail').textContent = currentUser;
             
-            loadProducts();
+            // Carregar acessos do usuário ANTES de carregar produtos
+            await loadUserAccess();
             
-            if (!hasShownPwaPopup && deferredPrompt) {
+            // Carregar produtos
+            await loadProducts();
+            
+            // PWA banner (se necessário)
+            if (deferredPrompt && shouldShowPwaToday() && !memoryStore.hasShownPwaPopup) {
                 setTimeout(() => showPwaInstallBanner(), 2000);
             }
         }
 
         function handleLogout() {
             if (confirm('Deseja realmente sair?')) {
-                localStorage.removeItem('currentUser');
-                localStorage.removeItem('isLoggedIn');
+                sessionStorage.removeItem('currentUser');
+                sessionStorage.removeItem('isLoggedIn');
                 location.reload();
             }
         }
 
         // =============================================================================
-        // MODAL FUNCTIONALITY
+        // USER ACCESS MANAGEMENT - SISTEMA OTIMIZADO
         // =============================================================================
+        
+        async function loadUserAccess() {
+            if (!currentUser || memoryStore.userAccessLoaded) {
+                return;
+            }
+            
+            console.log('🔐 Carregando acessos do usuário:', currentUser);
+            
+            try {
+                const response = await fetch(`${API_BASE}/debug/access/${encodeURIComponent(currentUser)}`);
+                const data = await response.json();
+                
+                if (data.access_records) {
+                    // Limpar acessos anteriores
+                    memoryStore.userAccess.clear();
+                    
+                    // Adicionar todos os planos com acesso ativo
+                    data.access_records.forEach(access => {
+                        if (access.status === 'active' && access.plan_code) {
+                            memoryStore.userAccess.set(access.plan_code, true);
+                            console.log(`✅ Acesso liberado: ${access.plan_code} (${access.plan_name || 'N/A'})`);
+                        }
+                    });
+                    
+                    console.log(`📊 Total de acessos carregados: ${memoryStore.userAccess.size}`);
+                    memoryStore.userAccessLoaded = true;
+                    
+                    // Atualizar status badge
+                    updateStatusBadge();
+                }
+            } catch (error) {
+                console.log('⚠️ Erro ao carregar acessos (usando modo offline):', error);
+                memoryStore.userAccessLoaded = true; // Marcar como carregado mesmo com erro
+            }
+        }
+        
+        function hasAccessToPlan(planCode) {
+            if (!planCode || !memoryStore.userAccessLoaded) {
+                return false;
+            }
+            return memoryStore.userAccess.has(planCode);
+        }
+        
+        function hasAccessToProduct(product) {
+            if (!product) return false;
+            
+            // Verificar se o usuário tem acesso a qualquer um dos planos do produto
+            const plans = [product.plano_1, product.plano_2, product.plano_3].filter(p => p);
+            
+            if (plans.length === 0) {
+                return true; // Produto sem planos = acesso livre
+            }
+            
+            return plans.some(plan => hasAccessToPlan(plan));
+        }
+        
+        function updateStatusBadge() {
+            const statusBadge = document.getElementById('statusBadge');
+            
+            if (memoryStore.userAccess.size > 0) {
+                statusBadge.textContent = 'VIP';
+                statusBadge.classList.add('vip');
+                console.log('👑 Status: VIP');
+            } else {
+                statusBadge.textContent = 'FREE';
+                statusBadge.classList.remove('vip');
+                console.log('🆓 Status: FREE');
+            }
+        }
+
+        // =============================================================================
+        // MODAL FUNCTIONALITY - COM CONTROLE DIÁRIO INTELIGENTE
+        // =============================================================================
+        
         function showVipModal() {
             const modal = document.getElementById('vipModal');
             modal.style.display = 'flex';
+            markVipModalShownToday();
         }
 
         function closeVipModal() {
@@ -1172,52 +1301,32 @@
             modal.style.display = 'none';
         }
 
-        function showFirstClickModal() {
-            if (!hasShownFirstClick) {
-                showVipModal();
-                hasShownFirstClick = true;
-                localStorage.setItem('hasShownFirstClick', 'true');
-            }
-        }
-
         async function openModal(product) {
-            // Verificar acesso se o produto tem planos configurados
+            console.log('🎬 Abrindo modal para:', product.name);
+            console.log('📋 Planos do produto:', [product.plano_1, product.plano_2, product.plano_3].filter(p => p));
+            
+            // Verificar se o produto tem planos configurados
             const planos = [product.plano_1, product.plano_2, product.plano_3].filter(p => p);
             
-            if (planos.length > 0 && currentUser) {
-                let hasAccess = false;
-                
-                // Verificar acesso para qualquer um dos planos
-                for (const plano of planos) {
-                    try {
-                        const response = await fetch(`${API_BASE}/api/check-access`, {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json'
-                            },
-                            body: JSON.stringify({
-                                email: currentUser,
-                                plano_code: plano
-                            })
-                        });
-                        
-                        const data = await response.json();
-                        
-                        if (data.hasAccess) {
-                            hasAccess = true;
-                            break;
-                        }
-                    } catch (error) {
-                        console.error('Erro ao verificar acesso:', error);
-                    }
-                }
+            if (planos.length > 0) {
+                const hasAccess = hasAccessToProduct(product);
+                console.log('🔐 Tem acesso:', hasAccess);
                 
                 if (!hasAccess) {
-                    // Usuário não tem acesso - mostrar modal VIP
-                    showVipModal();
+                    // Usuário não tem acesso
+                    if (shouldShowVipModalToday()) {
+                        console.log('📢 Primeira vez hoje - mostrando VIP modal');
+                        showVipModal();
+                    } else {
+                        console.log('🔄 VIP modal já foi mostrado hoje - abrindo direto');
+                        showVipModal();
+                    }
                     return;
                 }
             }
+            
+            // Usuário tem acesso ou produto é gratuito - abrir modal do produto
+            console.log('✅ Abrindo modal do produto');
             
             const modal = document.getElementById('modalContent');
             const overlay = document.getElementById('productModal');
@@ -1320,20 +1429,23 @@
         }
 
         // =============================================================================
-        // PRODUCTS FUNCTIONALITY
+        // PRODUCTS FUNCTIONALITY - COM SISTEMA DE ACESSO INTEGRADO
         // =============================================================================
+        
         async function loadProducts() {
             try {
                 const response = await fetch(`${API_BASE}/api/products`);
                 const data = await response.json();
                 
                 if (data.success) {
+                    console.log('📦 Produtos carregados da API:', data.products.length);
                     renderProducts(data.products);
                 } else {
-                    renderMockProducts(); // Fallback para dados mock
+                    console.log('⚠️ API retornou erro, usando dados mock');
+                    renderMockProducts();
                 }
             } catch (error) {
-                console.log('API not available, using mock data');
+                console.log('⚠️ API indisponível, usando dados mock');
                 renderMockProducts();
             }
         }
@@ -1348,6 +1460,7 @@
                     main_video: "https://e-volutionn.com/wp-content/uploads/2025/07/download-1.mp4",
                     access_url: "https://wa.me/5511975768554?text=Oi%20Fabi%2C%20vim%20pelo%20APP",
                     category: "meus_produtos",
+                    plano_1: "PPLQQLST6",
                     gallery: [
                         { type: "image", url: "https://e-volutionn.com/wp-content/uploads/2025/07/IMG_7978.jpg" },
                         { type: "image", url: "https://e-volutionn.com/wp-content/uploads/2025/07/IMG_7975.jpg" },
@@ -1363,6 +1476,7 @@
                     buy_url: "https://hotmoney.space/",
                     price: 147.00,
                     category: "mais_vendidos",
+                    plano_1: "PPLQQLST7",
                     gallery: [
                         { type: "video", url: "https://www.w3schools.com/html/mov_bbb.mp4" },
                         { type: "image", url: "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=400&h=600&fit=crop" }
@@ -1370,6 +1484,7 @@
                 }
             ];
             
+            console.log('📦 Usando produtos mock:', mockProducts.length);
             renderProducts(mockProducts);
         }
 
@@ -1388,17 +1503,57 @@
                 if (container) container.innerHTML = '';
             });
 
-            // Group products by category
-            const productsByCategory = {};
+            // Separar produtos com e sem acesso
+            const productsWithAccess = [];
+            const productsWithoutAccess = [];
+            
             products.forEach(product => {
-                const category = product.category || 'meus_produtos';
+                if (hasAccessToProduct(product)) {
+                    productsWithAccess.push(product);
+                    console.log(`✅ ${product.name} - Acesso liberado`);
+                } else {
+                    productsWithoutAccess.push(product);
+                    console.log(`🔒 ${product.name} - Sem acesso`);
+                }
+            });
+
+            // **NOVA FUNCIONALIDADE: Produtos liberados vão automaticamente para "MEUS PRODUTOS"**
+            if (productsWithAccess.length > 0) {
+                const meusProdutosContainer = categories['meus_produtos'];
+                
+                productsWithAccess.forEach(product => {
+                    // Marcar produto como liberado
+                    product.isOwned = true;
+                    meusProdutosContainer.appendChild(createProductCard(product));
+                });
+                
+                console.log(`👑 ${productsWithAccess.length} produtos adicionados a "MEUS PRODUTOS"`);
+            }
+
+            // Group remaining products by their original category
+            const productsByCategory = {};
+            
+            // Adicionar produtos sem acesso nas categorias originais
+            productsWithoutAccess.forEach(product => {
+                const category = product.category || 'mais_vendidos';
                 if (!productsByCategory[category]) {
                     productsByCategory[category] = [];
                 }
                 productsByCategory[category].push(product);
             });
+            
+            // Adicionar produtos com acesso nas categorias originais TAMBÉM (além de "meus_produtos")
+            productsWithAccess.forEach(product => {
+                const category = product.category || 'mais_vendidos';
+                if (category !== 'meus_produtos') { // Evitar duplicatas
+                    if (!productsByCategory[category]) {
+                        productsByCategory[category] = [];
+                    }
+                    productsByCategory[category].push(product);
+                }
+            });
 
-            // Render products in their categories
+            // Render products in their original categories
             Object.entries(productsByCategory).forEach(([category, categoryProducts]) => {
                 const container = categories[category];
                 if (container) {
@@ -1411,9 +1566,18 @@
             // Add empty message for empty categories
             Object.entries(categories).forEach(([category, container]) => {
                 if (container && container.children.length === 0) {
-                    container.innerHTML = '<div class="loading">Nenhum produto nesta categoria</div>';
+                    if (category === 'meus_produtos') {
+                        container.innerHTML = '<div class="loading">🔓 Adquira produtos para vê-los aqui</div>';
+                    } else {
+                        container.innerHTML = '<div class="loading">Nenhum produto nesta categoria</div>';
+                    }
                 }
             });
+            
+            console.log('📊 Resumo da renderização:');
+            console.log(`- Produtos com acesso: ${productsWithAccess.length}`);
+            console.log(`- Produtos sem acesso: ${productsWithoutAccess.length}`);
+            console.log(`- Total: ${products.length}`);
         }
 
         function createProductCard(product) {
@@ -1428,8 +1592,11 @@
             
             card.appendChild(img);
             
-            // Se o produto não é owned (comprado), adicionar lock overlay
-            if (!product.isOwned && (product.plano_1 || product.plano_2 || product.plano_3)) {
+            // Adicionar lock overlay apenas se NÃO tiver acesso e tiver planos configurados
+            const hasPlans = [product.plano_1, product.plano_2, product.plano_3].some(p => p);
+            const hasAccess = hasAccessToProduct(product);
+            
+            if (hasPlans && !hasAccess && !product.isOwned) {
                 const overlay = document.createElement('div');
                 overlay.className = 'locked-overlay';
                 overlay.innerHTML = `
@@ -1447,6 +1614,7 @@
         // =============================================================================
         // NAVIGATION
         // =============================================================================
+        
         function navigate(section) {
             document.querySelectorAll('.nav-item').forEach(item => {
                 item.classList.remove('active');
@@ -1462,6 +1630,7 @@
         // =============================================================================
         // EVENT LISTENERS
         // =============================================================================
+        
         window.onclick = function(event) {
             const productModal = document.getElementById('productModal');
             const vipModal = document.getElementById('vipModal');
@@ -1473,6 +1642,179 @@
                 closeVipModal();
             }
         };
+        
+        // =============================================================================
+        // DEBUG FUNCTIONS - PARA TESTES
+        // =============================================================================
+        
+   // Função para debug no console
+        window.debugVIP = {
+            showUserAccess: () => {
+                console.log('🔐 Acessos do usuário:', memoryStore.userAccess);
+                console.log('📊 Acessos carregados:', memoryStore.userAccessLoaded);
+                console.log('👤 Usuário atual:', currentUser);
+                return {
+                    userAccess: Array.from(memoryStore.userAccess.entries()),
+                    userAccessLoaded: memoryStore.userAccessLoaded,
+                    currentUser: currentUser
+                };
+            },
+            
+            clearAccess: () => {
+                memoryStore.userAccess.clear();
+                memoryStore.userAccessLoaded = false;
+                console.log('🧹 Acessos limpos');
+            },
+            
+            simulateAccess: (planCode) => {
+                memoryStore.userAccess.set(planCode, true);
+                updateStatusBadge();
+                console.log(`🔓 Acesso simulado para plano: ${planCode}`);
+                location.reload(); // Recarregar para ver mudanças
+            },
+            
+            showPwaPopup: () => {
+                showPwaInstallBanner();
+            },
+            
+            showVipPopup: () => {
+                showVipModal();
+            },
+            
+            resetDailyControls: () => {
+                sessionStorage.removeItem('pwaLastShown');
+                sessionStorage.removeItem('vipModalLastShown');
+                memoryStore.hasShownPwaPopup = false;
+                memoryStore.pwaLastShown = null;
+                memoryStore.vipModalLastShown = null;
+                console.log('🔄 Controles diários resetados');
+            }
+        };
+        
+        // Log de inicialização
+        console.log('🚀 VIP App inicializado');
+        console.log('📱 PWA suportado:', 'serviceWorker' in navigator);
+        console.log('👤 Usuário logado:', isLoggedIn);
+        console.log('📧 Email atual:', currentUser);
+        console.log('🎯 Modo:', window.location.hostname === 'localhost' ? 'Desenvolvimento' : 'Produção');
+        
+        // Para debug fácil no console
+        console.log('💡 Use debugVIP.* no console para testar funcionalidades');
+        
+        // =============================================================================
+        // HELPER FUNCTIONS - EXTRAS
+        // =============================================================================
+        
+        // Função para simular compra (desenvolvimento)
+        function simulatePurchase(planCode) {
+            if (!currentUser) {
+                alert('Faça login primeiro');
+                return;
+            }
+            
+            if (confirm(`Simular compra do plano ${planCode}?`)) {
+                fetch(`${API_BASE}/debug/simulate-access`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        email: currentUser,
+                        plan_code: planCode
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('✅ Acesso liberado com sucesso!');
+                        location.reload();
+                    } else {
+                        alert('❌ Erro ao liberar acesso');
+                    }
+                })
+                .catch(error => {
+                    console.error('Erro:', error);
+                    alert('❌ Erro de conexão');
+                });
+            }
+        }
+        
+        // Função para verificar status da API
+        async function checkAPIStatus() {
+            try {
+                const response = await fetch(`${API_BASE}/api/products`);
+                console.log('🌐 API Status:', response.ok ? 'Online' : 'Erro');
+                return response.ok;
+            } catch (error) {
+                console.log('🌐 API Status: Offline');
+                return false;
+            }
+        }
+        
+        // Verificar API no carregamento
+        document.addEventListener('DOMContentLoaded', () => {
+            setTimeout(checkAPIStatus, 1000);
+        });
+        
+        // =============================================================================
+        // PERFORMANCE OPTIMIZATIONS
+        // =============================================================================
+        
+        // Lazy loading para imagens
+        const imageObserver = new IntersectionObserver((entries, observer) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const img = entry.target;
+                    if (img.dataset.src) {
+                        img.src = img.dataset.src;
+                        img.removeAttribute('data-src');
+                        observer.unobserve(img);
+                    }
+                }
+            });
+        });
+        
+        // Aplicar lazy loading quando produtos forem renderizados
+        function applyLazyLoading() {
+            const lazyImages = document.querySelectorAll('img[data-src]');
+            lazyImages.forEach(img => imageObserver.observe(img));
+        }
+        
+        // =============================================================================
+        // ERROR HANDLING & FALLBACKS
+        // =============================================================================
+        
+        window.addEventListener('error', (e) => {
+            console.error('🚨 Erro JavaScript:', e.error);
+        });
+        
+        window.addEventListener('unhandledrejection', (e) => {
+            console.error('🚨 Promise rejeitada:', e.reason);
+        });
+        
+        // Fallback para navegadores antigos
+        if (!window.fetch) {
+            console.warn('⚠️ Fetch não suportado, usando fallback');
+            // Implementar fallback se necessário
+        }
+        
+        // =============================================================================
+        // FINAL INITIALIZATION
+        // =============================================================================
+        
+        // Garantir que tudo funcione mesmo se algum elemento não existir
+        function safeElementQuery(id, fallback = null) {
+            const element = document.getElementById(id);
+            if (!element) {
+                console.warn(`⚠️ Elemento #${id} não encontrado`);
+                return fallback;
+            }
+            return element;
+        }
+        
+        // Verificação final
+        console.log('✅ VIP App carregado completamente');
+        console.log('🎯 Pronto para uso!');
     </script>
 </body>
 </html>
