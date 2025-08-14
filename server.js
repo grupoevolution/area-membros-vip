@@ -76,9 +76,11 @@ db.serialize(() => {
         )
     `);
 
-    // Insert some sample data if table is empty
+    // Insert some sample data if table is empty (VERSÃO CORRIGIDA)
     db.get("SELECT COUNT(*) as count FROM products", (err, row) => {
         if (!err && row.count === 0) {
+            console.log('📦 Inserindo produtos sample...');
+            
             const sampleProducts = [
                 {
                     name: "Whatsapp Da Fabi",
@@ -122,8 +124,14 @@ db.serialize(() => {
                             `, [this.lastID, item.type, item.url, item.order_index]);
                         });
                     }
+                    
+                    if (index === sampleProducts.length - 1) {
+                        console.log('✅ Produtos sample inseridos com sucesso!');
+                    }
                 });
             });
+        } else {
+            console.log(`📦 Banco já tem ${row.count} produtos. Pulando inserção de samples.`);
         }
     });
 });
@@ -286,7 +294,7 @@ app.get('/api/products/:id', (req, res) => {
     });
 });
 
-// Create new product
+// Create new product (VERSÃO ATUALIZADA COM GALERIA)
 app.post('/api/products', (req, res) => {
     const { 
         name, 
@@ -299,7 +307,8 @@ app.post('/api/products', (req, res) => {
         category,
         plano_1,
         plano_2,
-        plano_3
+        plano_3,
+        gallery
     } = req.body;
     
     if (!name) {
@@ -329,8 +338,112 @@ app.post('/api/products', (req, res) => {
             return res.status(500).json({ success: false, error: 'Erro ao criar produto' });
         }
         
-        console.log(`✅ Produto criado: ${name} (ID: ${this.lastID})`);
-        res.json({ success: true, productId: this.lastID, message: 'Produto criado com sucesso!' });
+        const productId = this.lastID;
+        
+        // Insert gallery items if provided
+        if (gallery && gallery.length > 0) {
+            const insertMediaQuery = `
+                INSERT INTO product_media (product_id, type, url, order_index)
+                VALUES (?, ?, ?, ?)
+            `;
+            
+            gallery.forEach((item, index) => {
+                if (item.url && item.type) {
+                    db.run(insertMediaQuery, [productId, item.type, item.url, index], (err) => {
+                        if (err) {
+                            console.error('❌ Erro ao inserir mídia da galeria:', err);
+                        }
+                    });
+                }
+            });
+        }
+        
+        console.log(`✅ Produto criado: ${name} (ID: ${productId})`);
+        res.json({ success: true, productId: productId, message: 'Produto criado com sucesso!' });
+    });
+});
+
+// Update product (NOVA ROTA)
+app.put('/api/products/:id', (req, res) => {
+    const productId = req.params.id;
+    const { 
+        name, 
+        description, 
+        banner_url,
+        main_video,
+        access_url, 
+        buy_url, 
+        price, 
+        category,
+        plano_1,
+        plano_2,
+        plano_3,
+        gallery
+    } = req.body;
+    
+    if (!name) {
+        return res.status(400).json({ success: false, error: 'Nome é obrigatório' });
+    }
+    
+    // Update product
+    const updateQuery = `
+        UPDATE products 
+        SET name = ?, description = ?, banner_url = ?, main_video = ?, 
+            access_url = ?, buy_url = ?, price = ?, category = ?, 
+            plano_1 = ?, plano_2 = ?, plano_3 = ?, updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+    `;
+    
+    db.run(updateQuery, [
+        name, 
+        description, 
+        banner_url || null,
+        main_video || null,
+        access_url || null,
+        buy_url || null,
+        parseFloat(price) || 0,
+        category || 'meus_produtos',
+        plano_1 || null,
+        plano_2 || null,
+        plano_3 || null,
+        productId
+    ], function(err) {
+        if (err) {
+            console.error('❌ Erro ao atualizar produto:', err);
+            return res.status(500).json({ success: false, error: 'Erro ao atualizar produto' });
+        }
+        
+        if (this.changes === 0) {
+            return res.status(404).json({ success: false, error: 'Produto não encontrado' });
+        }
+        
+        // Delete existing gallery items
+        db.run('DELETE FROM product_media WHERE product_id = ?', [productId], (err) => {
+            if (err) {
+                console.error('❌ Erro ao limpar galeria:', err);
+            }
+            
+            // Insert new gallery items
+            if (gallery && gallery.length > 0) {
+                const insertMediaQuery = `
+                    INSERT INTO product_media (product_id, type, url, order_index)
+                    VALUES (?, ?, ?, ?)
+                `;
+                
+                gallery.forEach((item, index) => {
+                    if (item.url && item.type) {
+                        db.run(insertMediaQuery, [productId, item.type, item.url, index], (err) => {
+                            if (err) {
+                                console.error('❌ Erro ao inserir mídia da galeria:', err);
+                            }
+                        });
+                    }
+                });
+            }
+            
+            console.log(`✅ Produto atualizado: ${name} (ID: ${productId})`);
+            res.json({ success: true, message: 'Produto atualizado com sucesso!' });
+        });
     });
 });
 
@@ -617,18 +730,21 @@ app.get('/sw.js', (req, res) => {
 // SERVE STATIC FILES
 // =============================================================================
 
+// Rota do painel administrativo (ATUALIZADA)
 app.get('/painel-x7k2m9', (req, res) => {
     try {
         const adminPath = path.join(__dirname, 'public', 'admin.html');
         
         if (fs.existsSync(adminPath)) {
+            console.log('✅ Servindo admin.html do arquivo');
             res.sendFile(adminPath);
         } else {
+            console.log('⚠️ admin.html não encontrado, servindo HTML inline');
             res.send(`
                 <!DOCTYPE html>
                 <html>
                 <head>
-                    <title>Admin - Debug</title>
+                    <title>🛠️ Painel Admin VIP</title>
                     <style>
                         body { 
                             background: #111; 
@@ -637,21 +753,47 @@ app.get('/painel-x7k2m9', (req, res) => {
                             text-align: center; 
                             padding: 50px; 
                         }
-                        a { color: #E50914; text-decoration: none; margin: 10px; display: block; }
+                        .container {
+                            max-width: 600px;
+                            margin: 0 auto;
+                            background: #222;
+                            padding: 2rem;
+                            border-radius: 10px;
+                            border: 1px solid #E50914;
+                        }
+                        h1 { color: #E50914; }
+                        a { 
+                            color: #E50914; 
+                            text-decoration: none; 
+                            margin: 10px; 
+                            display: block; 
+                            padding: 10px;
+                            background: #333;
+                            border-radius: 5px;
+                        }
+                        a:hover { background: #444; }
+                        .status { color: #28a745; margin: 1rem 0; }
                     </style>
                 </head>
                 <body>
-                    <h1>🚀 Sistema VIP - Debug Panel</h1>
-                    <p>O arquivo admin.html não foi encontrado.</p>
-                    
-                    <h2>🔧 Links de Debug:</h2>
-                    <a href="/debug/products">📦 Ver Produtos</a>
-                    <a href="/debug/access">🔑 Ver Todos os Acessos</a>
-                    <a href="/debug/access/cauapetry2006@gmail.com">👤 Ver Acesso do Cauan</a>
-                    
-                    <h2>🧪 Testar Acesso:</h2>
-                    <p>POST para /debug/simulate-access com:</p>
-                    <pre>{ "email": "teste@email.com", "plan_code": "PPLQQLST6" }</pre>
+                    <div class="container">
+                        <h1>🛠️ Painel Administrativo VIP</h1>
+                        <div class="status">✅ Servidor funcionando corretamente!</div>
+                        
+                        <h3>📋 Para ativar o painel completo:</h3>
+                        <p>1. Copie o HTML do painel administrativo</p>
+                        <p>2. Salve como <strong>public/admin.html</strong></p>
+                        <p>3. Reinicie o servidor</p>
+                        
+                        <h3>🔧 Links úteis:</h3>
+                        <a href="/">🏠 Voltar ao App Principal</a>
+                        <a href="/debug/products">📦 Ver Produtos (Debug)</a>
+                        <a href="/debug/access">🔑 Ver Acessos (Debug)</a>
+                        
+                        <p style="margin-top: 2rem; font-size: 0.9rem; color: #666;">
+                            Login: painel-iago | Senha: #Senha8203
+                        </p>
+                    </div>
                 </body>
                 </html>
             `);
@@ -682,17 +824,44 @@ app.get('/', (req, res) => {
                             text-align: center; 
                             padding: 50px; 
                         }
-                        a { color: #E50914; text-decoration: none; margin: 10px; display: block; }
+                        .container {
+                            max-width: 600px;
+                            margin: 0 auto;
+                            background: #222;
+                            padding: 2rem;
+                            border-radius: 10px;
+                            border: 1px solid #E50914;
+                        }
+                        h1 { color: #E50914; }
+                        a { 
+                            color: #E50914; 
+                            text-decoration: none; 
+                            margin: 10px; 
+                            display: block; 
+                            padding: 10px;
+                            background: #333;
+                            border-radius: 5px;
+                        }
+                        a:hover { background: #444; }
+                        .status { color: #28a745; margin: 1rem 0; }
                     </style>
                 </head>
                 <body>
-                    <h1>🚀 Membros VIP - Sistema Funcionando!</h1>
-                    <p>✅ Servidor rodando corretamente</p>
-                    <p>⚠️ Arquivo index.html não encontrado em public/</p>
-                    
-                    <h2>Links:</h2>
-                    <a href="/painel-x7k2m9">🛠️ Painel Admin</a>
-                    <a href="/debug/products">📦 Ver Produtos (Debug)</a>
+                    <div class="container">
+                        <h1>🚀 Membros VIP - Sistema Funcionando!</h1>
+                        <div class="status">✅ Servidor rodando corretamente</div>
+                        <p>⚠️ Arquivo index.html não encontrado em public/</p>
+                        
+                        <h2>🔗 Links principais:</h2>
+                        <a href="/painel-x7k2m9">🛠️ Painel Administrativo</a>
+                        <a href="/debug/products">📦 Ver Produtos (Debug)</a>
+                        <a href="/debug/access">🔑 Ver Acessos (Debug)</a>
+                        
+                        <h3>📱 API Status:</h3>
+                        <p>✅ Webhook PerfectPay: /webhook/perfectpay</p>
+                        <p>✅ API Produtos: /api/products</p>
+                        <p>✅ Verificação de Acesso: /api/check-access</p>
+                    </div>
                 </body>
                 </html>
             `);
@@ -721,6 +890,9 @@ app.listen(PORT, () => {
     console.log(`   Painel Admin:  http://localhost:${PORT}/painel-x7k2m9`);
     console.log(`\n🔌 API ENDPOINTS:`);
     console.log(`   Produtos:      GET  /api/products`);
+    console.log(`   Criar:         POST /api/products`);
+    console.log(`   Editar:        PUT  /api/products/:id`);
+    console.log(`   Excluir:       DELETE /api/products/:id`);
     console.log(`   Webhook:       POST /webhook/perfectpay`);
     console.log(`   Verificar:     POST /api/check-access`);
     console.log(`\n🐛 DEBUG ROUTES:`);
@@ -728,6 +900,7 @@ app.listen(PORT, () => {
     console.log(`   Ver Acessos:   GET  /debug/access`);
     console.log(`   Simular:       POST /debug/simulate-access`);
     console.log(`\n✅ Sistema pronto para receber webhooks do PerfectPay!`);
+    console.log(`🛠️ Painel admin disponível com login persistente!`);
     console.log(`=====================================\n`);
 });
 
