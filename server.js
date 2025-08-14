@@ -130,37 +130,6 @@ db.serialize(() => {
 });
 
 // =============================================================================
-// FILE UPLOAD CONFIGURATION
-// =============================================================================
-const storage = multer.diskStorage({
-    destination: function (req, file, cb) {
-        cb(null, 'uploads/');
-    },
-    filename: function (req, file, cb) {
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
-    }
-});
-
-const upload = multer({
-    storage: storage,
-    limits: {
-        fileSize: 100 * 1024 * 1024 // 100MB limit
-    },
-    fileFilter: (req, file, cb) => {
-        const allowedTypes = /jpeg|jpg|png|gif|mp4|mov|avi|webm/;
-        const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-        const mimetype = allowedTypes.test(file.mimetype);
-
-        if (mimetype && extname) {
-            return cb(null, true);
-        } else {
-            cb(new Error('Apenas imagens e vídeos são permitidos!'));
-        }
-    }
-});
-
-// =============================================================================
 // API ROUTES - PRODUCTS
 // =============================================================================
 
@@ -581,13 +550,7 @@ app.get('/', (req, res) => {
 // ERROR HANDLING
 // =============================================================================
 app.use((error, req, res, next) => {
-    if (error instanceof multer.MulterError) {
-        if (error.code === 'LIMIT_FILE_SIZE') {
-            return res.status(400).json({ success: false, error: 'Arquivo muito grande. Máximo 100MB.' });
-        }
-    }
-    
-    console.error(error);
+    console.error('Error:', error);
     res.status(500).json({ success: false, error: 'Erro interno do servidor' });
 });
 
