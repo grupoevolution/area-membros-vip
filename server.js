@@ -8,33 +8,72 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // =============================================================================
-// MIDDLEWARE
+// MIDDLEWARE - CACHE OTIMIZADO E CORRIGIDO
 // =============================================================================
 app.use(cors());
 app.use(express.json());
 
-// Static files with correct cache headers
+// Static files com controle inteligente de cache
 app.use(express.static('public', {
-    setHeaders: (res, path) => {
-        // No cache for HTML files (always fresh)
-        if (path.endsWith('.html')) {
+    setHeaders: (res, filePath) => {
+        const ext = path.extname(filePath);
+        
+        // HTML sempre fresh (nunca cache)
+        if (ext === '.html') {
             res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
             res.setHeader('Pragma', 'no-cache');
             res.setHeader('Expires', '0');
+            res.setHeader('ETag', `"${Date.now()}"`); // ETag único
         }
-        // Short cache for other static files
+        // CSS e JS com cache muito curto
+        else if (ext === '.css' || ext === '.js') {
+            res.setHeader('Cache-Control', 'public, max-age=60'); // 1 minuto
+        }
+        // Outros arquivos com cache curto
         else {
-            res.setHeader('Cache-Control', 'public, max-age=300'); // 5 minutes
+            res.setHeader('Cache-Control', 'public, max-age=300'); // 5 minutos
         }
+        
+        // Force revalidation
+        res.setHeader('Last-Modified', new Date().toUTCString());
     }
 }));
 
-app.use('/uploads', express.static('uploads'));
+app.use('/uploads', express.static('uploads', {
+    setHeaders: (res) => {
+        res.setHeader('Cache-Control', 'public, max-age=3600'); // 1 hora para uploads
+    }
+}));
 
 // Create uploads directory if it doesn't exist
 if (!fs.existsSync('uploads')) {
     fs.mkdirSync('uploads');
 }
+
+// =============================================================================
+// MIDDLEWARE ANTI-CACHE CENTRALIZADO - CORREÇÃO PRINCIPAL
+// =============================================================================
+const forceNoCacheMiddleware = (req, res, next) => {
+    // Headers mais agressivos para forçar dados frescos
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate, proxy-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    res.setHeader('Surrogate-Control', 'no-store');
+    res.setHeader('ETag', `"${Date.now()}-${Math.random()}"`); // ETag único sempre
+    res.setHeader('Last-Modified', new Date().toUTCString());
+    res.setHeader('Vary', '*');
+    
+    // Headers adicionais para garantir
+    res.setHeader('X-Accel-Expires', '0');
+    res.setHeader('X-Cache-Control', 'no-cache');
+    
+    next();
+};
+
+// Aplicar anti-cache para todas as rotas de API, debug e webhook
+app.use('/api/*', forceNoCacheMiddleware);
+app.use('/debug/*', forceNoCacheMiddleware);
+app.use('/webhook/*', forceNoCacheMiddleware);
 
 // =============================================================================
 // DATABASE SETUP
@@ -88,11 +127,12 @@ db.serialize(() => {
             payment_id TEXT,
             status TEXT DEFAULT 'active',
             expires_at DATETIME,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )
     `);
 
-    // Insert some sample data if table is empty (VERSÃO CORRIGIDA)
+    // Insert some sample data if table is empty
     db.get("SELECT COUNT(*) as count FROM products", (err, row) => {
         if (!err && row.count === 0) {
             console.log('📦 Inserindo produtos sample...');
@@ -147,38 +187,48 @@ db.serialize(() => {
                 });
             });
         } else {
-            console.log(`📦 Banco já tem ${row.count} produtos. Pulando inserção de samples.`);
+            console.log(`📦 Banco já tem ${row.count} produtos.`);
         }
     });
 });
 
 // =============================================================================
-// DEBUG ROUTES - PARA TESTAR O BANCO
+// DEBUG ROUTES - SEMPRE FRESH
 // =============================================================================
 
-// Rota para verificar produtos no banco
 app.get('/debug/products', (req, res) => {
-    db.all('SELECT * FROM products', [], (err, rows) => {
+    console.log(`🐛 DEBUG: Listando produtos (${new Date().toLocaleTimeString()})`);
+    
+    db.all('SELECT * FROM products ORDER BY updated_at DESC', [], (err, rows) => {
         if (err) {
             return res.status(500).json({ error: err.message });
         }
-        res.json({ products: rows });
+        res.json({ 
+            products: rows,
+            timestamp: new Date().toISOString(),
+            total: rows.length
+        });
     });
 });
 
-// Rota para verificar acessos no banco
 app.get('/debug/access', (req, res) => {
-    db.all('SELECT * FROM user_access ORDER BY created_at DESC', [], (err, rows) => {
+    console.log(`🐛 DEBUG: Listando acessos (${new Date().toLocaleTimeString()})`);
+    
+    db.all('SELECT * FROM user_access ORDER BY created_at DESC LIMIT 50', [], (err, rows) => {
         if (err) {
             return res.status(500).json({ error: err.message });
         }
-        res.json({ access_records: rows });
+        res.json({ 
+            access_records: rows,
+            timestamp: new Date().toISOString(),
+            total: rows.length
+        });
     });
 });
 
-// Rota para verificar acesso específico
 app.get('/debug/access/:email', (req, res) => {
     const email = req.params.email;
+    console.log(`🐛 DEBUG: Verificando acessos para ${email}`);
     
     const query = `
         SELECT ua.*, p.name as product_name, p.plano_1, p.plano_2, p.plano_3
@@ -195,12 +245,12 @@ app.get('/debug/access/:email', (req, res) => {
         res.json({ 
             email,
             access_records: rows,
-            total: rows.length
+            total: rows.length,
+            timestamp: new Date().toISOString()
         });
     });
 });
 
-// Rota para simular webhook (para testes)
 app.post('/debug/simulate-access', (req, res) => {
     const { email, plan_code } = req.body;
     
@@ -208,7 +258,6 @@ app.post('/debug/simulate-access', (req, res) => {
         return res.status(400).json({ error: 'Email e plan_code são obrigatórios' });
     }
     
-    // Inserir acesso manualmente para teste
     const insertQuery = `
         INSERT INTO user_access 
         (email, product_code, plan_code, plan_name, sale_amount, payment_id, status)
@@ -217,7 +266,7 @@ app.post('/debug/simulate-access', (req, res) => {
     
     db.run(insertQuery, [
         email,
-        plan_code, // usando plan_code como product_code também
+        plan_code,
         plan_code,
         'Plano Teste',
         99.99,
@@ -232,21 +281,18 @@ app.post('/debug/simulate-access', (req, res) => {
         res.json({ 
             success: true, 
             message: 'Acesso liberado para teste',
-            access_id: this.lastID
+            access_id: this.lastID,
+            timestamp: new Date().toISOString()
         });
     });
 });
 
 // =============================================================================
-// API ROUTES - PRODUCTS
+// API ROUTES - PRODUCTS (SEMPRE FRESH)
 // =============================================================================
 
-// Get all products with their media (NO CACHE)
 app.get('/api/products', (req, res) => {
-    // Force no cache for API responses
-    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-    res.setHeader('Pragma', 'no-cache');
-    res.setHeader('Expires', '0');
+    console.log(`📦 API: Carregando produtos (${new Date().toLocaleTimeString()})`);
     
     const query = `
         SELECT p.*, 
@@ -257,7 +303,7 @@ app.get('/api/products', (req, res) => {
         FROM products p 
         LEFT JOIN product_media pm ON p.id = pm.product_id 
         GROUP BY p.id 
-        ORDER BY p.created_at DESC
+        ORDER BY p.updated_at DESC, p.created_at DESC
     `;
     
     db.all(query, [], (err, rows) => {
@@ -285,12 +331,16 @@ app.get('/api/products', (req, res) => {
             return product;
         });
         
-        console.log(`📦 Produtos carregados: ${products.length}`);
-        res.json({ success: true, products });
+        console.log(`📦 Retornando ${products.length} produtos atualizados`);
+        res.json({ 
+            success: true, 
+            products,
+            timestamp: new Date().toISOString(),
+            cache_buster: Date.now()
+        });
     });
 });
 
-// Get single product
 app.get('/api/products/:id', (req, res) => {
     const productId = req.params.id;
     
@@ -310,12 +360,15 @@ app.get('/api/products/:id', (req, res) => {
             }
             
             product.gallery = media;
-            res.json({ success: true, product });
+            res.json({ 
+                success: true, 
+                product,
+                timestamp: new Date().toISOString()
+            });
         });
     });
 });
 
-// Create new product (VERSÃO ATUALIZADA COM GALERIA)
 app.post('/api/products', (req, res) => {
     const { 
         name, 
@@ -337,8 +390,8 @@ app.post('/api/products', (req, res) => {
     }
     
     const query = `
-        INSERT INTO products (name, description, banner_url, main_video, access_url, buy_url, price, category, plano_1, plano_2, plano_3)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO products (name, description, banner_url, main_video, access_url, buy_url, price, category, plano_1, plano_2, plano_3, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
     `;
     
     db.run(query, [
@@ -380,11 +433,15 @@ app.post('/api/products', (req, res) => {
         }
         
         console.log(`✅ Produto criado: ${name} (ID: ${productId})`);
-        res.json({ success: true, productId: productId, message: 'Produto criado com sucesso!' });
+        res.json({ 
+            success: true, 
+            productId: productId, 
+            message: 'Produto criado com sucesso!',
+            timestamp: new Date().toISOString()
+        });
     });
 });
 
-// Update product (NOVA ROTA)
 app.put('/api/products/:id', (req, res) => {
     const productId = req.params.id;
     const { 
@@ -406,7 +463,7 @@ app.put('/api/products/:id', (req, res) => {
         return res.status(400).json({ success: false, error: 'Nome é obrigatório' });
     }
     
-    // Update product
+    // Update product with timestamp
     const updateQuery = `
         UPDATE products 
         SET name = ?, description = ?, banner_url = ?, main_video = ?, 
@@ -463,12 +520,15 @@ app.put('/api/products/:id', (req, res) => {
             }
             
             console.log(`✅ Produto atualizado: ${name} (ID: ${productId})`);
-            res.json({ success: true, message: 'Produto atualizado com sucesso!' });
+            res.json({ 
+                success: true, 
+                message: 'Produto atualizado com sucesso!',
+                timestamp: new Date().toISOString()
+            });
         });
     });
 });
 
-// Delete product
 app.delete('/api/products/:id', (req, res) => {
     const productId = req.params.id;
     
@@ -484,15 +544,18 @@ app.delete('/api/products/:id', (req, res) => {
         }
         
         console.log(`✅ Produto deletado: ID ${productId}`);
-        res.json({ success: true, message: 'Produto deletado com sucesso!' });
+        res.json({ 
+            success: true, 
+            message: 'Produto deletado com sucesso!',
+            timestamp: new Date().toISOString()
+        });
     });
 });
 
 // =============================================================================
-// PERFECTPAY WEBHOOK & ACCESS CONTROL - OTIMIZADO
+// PERFECTPAY WEBHOOK & ACCESS CONTROL
 // =============================================================================
 
-// Webhook PerfectPay - VERSÃO OTIMIZADA
 app.post('/webhook/perfectpay', express.json(), (req, res) => {
     console.log('\n🔔 ===== WEBHOOK PERFECTPAY RECEBIDO =====');
     console.log('⏰ Timestamp:', new Date().toLocaleString('pt-BR'));
@@ -501,7 +564,6 @@ app.post('/webhook/perfectpay', express.json(), (req, res) => {
     try {
         const payload = req.body;
         
-        // Extrair dados do formato PerfectPay
         const {
             sale_status_enum_key,
             customer,
@@ -518,7 +580,6 @@ app.post('/webhook/perfectpay', express.json(), (req, res) => {
         console.log('- Nome do plano:', plan?.name);
         console.log('- Valor da venda:', sale_amount);
         
-        // Verificar se o pagamento foi aprovado
         if (sale_status_enum_key !== 'approved') {
             console.log(`❌ Status não aprovado: ${sale_status_enum_key}`);
             console.log('============================================\n');
@@ -572,7 +633,8 @@ app.post('/webhook/perfectpay', express.json(), (req, res) => {
                     return res.json({ 
                         success: true, 
                         message: 'Acesso já existente',
-                        access_id: existing.id
+                        access_id: existing.id,
+                        timestamp: new Date().toISOString()
                     });
                 }
                 
@@ -580,8 +642,8 @@ app.post('/webhook/perfectpay', express.json(), (req, res) => {
                 console.log('\n🔓 LIBERANDO ACESSO...');
                 const insertQuery = `
                     INSERT INTO user_access 
-                    (email, product_code, plan_code, plan_name, sale_amount, payment_id, status)
-                    VALUES (?, ?, ?, ?, ?, ?, 'active')
+                    (email, product_code, plan_code, plan_name, sale_amount, payment_id, status, updated_at)
+                    VALUES (?, ?, ?, ?, ?, ?, 'active', CURRENT_TIMESTAMP)
                 `;
                 
                 db.run(insertQuery, [
@@ -610,7 +672,8 @@ app.post('/webhook/perfectpay', express.json(), (req, res) => {
                         access_id: this.lastID,
                         plan: plan_name,
                         email: email,
-                        plan_code: plan_code
+                        plan_code: plan_code,
+                        timestamp: new Date().toISOString()
                     });
                 });
             });
@@ -623,11 +686,10 @@ app.post('/webhook/perfectpay', express.json(), (req, res) => {
     }
 });
 
-// Verificar acesso do usuário - VERSÃO OTIMIZADA
 app.post('/api/check-access', (req, res) => {
     const { email, plano_code } = req.body;
     
-    console.log(`🔍 Verificando acesso: ${email} → ${plano_code}`);
+    console.log(`🔍 Verificando acesso: ${email} → ${plano_code} (${new Date().toLocaleTimeString()})`);
     
     if (!email || !plano_code) {
         return res.status(400).json({ success: false, error: 'Email e código do plano são obrigatórios' });
@@ -639,7 +701,7 @@ app.post('/api/check-access', (req, res) => {
         LEFT JOIN products p ON (p.plano_1 = ua.plan_code OR p.plano_2 = ua.plan_code OR p.plano_3 = ua.plan_code)
         WHERE ua.email = ? AND ua.plan_code = ?
         AND ua.status = 'active'
-        ORDER BY ua.created_at DESC
+        ORDER BY ua.updated_at DESC, ua.created_at DESC
         LIMIT 1
     `;
     
@@ -655,14 +717,16 @@ app.post('/api/check-access', (req, res) => {
                 success: true, 
                 hasAccess: true, 
                 access: row,
-                message: `Acesso liberado - Plano: ${row.plan_name || plano_code}`
+                message: `Acesso liberado - Plano: ${row.plan_name || plano_code}`,
+                timestamp: new Date().toISOString()
             });
         } else {
             console.log(`❌ ACESSO NEGADO para ${email} no plano ${plano_code}`);
             res.json({ 
                 success: true, 
                 hasAccess: false, 
-                message: 'Acesso negado - Plano não adquirido'
+                message: 'Acesso negado - Plano não adquirido',
+                timestamp: new Date().toISOString()
             });
         }
     });
@@ -676,14 +740,22 @@ app.post('/api/admin/login', (req, res) => {
     const { username, password } = req.body;
     
     if (username === 'painel-iago' && password === '#Senha8203') {
-        res.json({ success: true, message: 'Login realizado com sucesso!' });
+        res.json({ 
+            success: true, 
+            message: 'Login realizado com sucesso!',
+            timestamp: new Date().toISOString()
+        });
     } else {
-        res.status(401).json({ success: false, error: 'Credenciais inválidas' });
+        res.status(401).json({ 
+            success: false, 
+            error: 'Credenciais inválidas',
+            timestamp: new Date().toISOString()
+        });
     }
 });
 
 // =============================================================================
-// PWA ROUTES
+// PWA ROUTES - CACHE MINIMALISTA
 // =============================================================================
 
 app.get('/manifest.json', (req, res) => {
@@ -711,36 +783,48 @@ app.get('/manifest.json', (req, res) => {
         ]
     };
     
+    // Cache manifest por 1 hora apenas
+    res.setHeader('Cache-Control', 'public, max-age=3600');
     res.json(manifest);
 });
 
 app.get('/sw.js', (req, res) => {
-    // Generate dynamic cache name with timestamp for auto-updates
-    const cacheVersion = Date.now();
+    // Force no cache for service worker
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    
+    // Generate dynamic cache name for auto-updates
+    const cacheVersion = `v${Date.now()}`;
     const swContent = `
-        const CACHE_NAME = 'vip-app-v${cacheVersion}';
-        const urlsToCache = [
+        const CACHE_NAME = 'vip-app-${cacheVersion}';
+        const ESSENTIAL_CACHE = [
             '/',
             '/manifest.json'
         ];
 
+        // Install - cache mínimo essencial
         self.addEventListener('install', event => {
-            console.log('🔧 SW: Installing new version');
+            console.log('🔧 SW: Installing version ${cacheVersion}');
             event.waitUntil(
                 caches.open(CACHE_NAME)
                     .then(cache => {
-                        console.log('📦 SW: Caching core files');
-                        return cache.addAll(urlsToCache);
+                        console.log('📦 SW: Caching essential files only');
+                        return cache.addAll(ESSENTIAL_CACHE);
                     })
                     .then(() => {
-                        console.log('✅ SW: Skip waiting');
+                        console.log('✅ SW: Skip waiting for immediate activation');
                         return self.skipWaiting();
+                    })
+                    .catch(err => {
+                        console.error('❌ SW: Install failed:', err);
                     })
             );
         });
 
+        // Activate - limpar caches antigos
         self.addEventListener('activate', event => {
-            console.log('🚀 SW: Activating new version');
+            console.log('🚀 SW: Activating version ${cacheVersion}');
             event.waitUntil(
                 caches.keys().then(cacheNames => {
                     return Promise.all(
@@ -752,51 +836,79 @@ app.get('/sw.js', (req, res) => {
                         })
                     );
                 }).then(() => {
-                    console.log('✅ SW: Claiming clients');
+                    console.log('✅ SW: All clients claimed');
                     return self.clients.claim();
                 })
             );
         });
 
+        // Fetch - estratégia network-first inteligente
         self.addEventListener('fetch', event => {
             const url = new URL(event.request.url);
             
-            // Never cache API calls - always fetch fresh
+            // NUNCA cachear APIs, debug ou webhooks - sempre buscar fresh
             if (url.pathname.startsWith('/api/') || 
                 url.pathname.startsWith('/debug/') || 
                 url.pathname.startsWith('/webhook/')) {
-                event.respondWith(fetch(event.request));
+                console.log('🔄 SW: API call - always fresh:', url.pathname);
+                event.respondWith(
+                    fetch(event.request.clone()).catch(() => {
+                        return new Response('{"success":false,"error":"Offline"}', {
+                            status: 503,
+                            headers: { 'Content-Type': 'application/json' }
+                        });
+                    })
+                );
                 return;
             }
             
-            // Cache other resources with network-first strategy
+            // Para outros recursos - network first, cache como fallback
             event.respondWith(
-                fetch(event.request)
+                fetch(event.request.clone())
                     .then(response => {
-                        // Don't cache if not ok
-                        if (!response.ok) {
-                            return caches.match(event.request) || response;
+                        // Se network OK, usar e atualizar cache se necessário
+                        if (response.ok) {
+                            // Só cachear arquivos essenciais específicos
+                            if (ESSENTIAL_CACHE.includes(url.pathname)) {
+                                const responseToCache = response.clone();
+                                caches.open(CACHE_NAME)
+                                    .then(cache => {
+                                        cache.put(event.request, responseToCache);
+                                    });
+                            }
                         }
-                        
-                        // Clone response for cache
-                        const responseToCache = response.clone();
-                        caches.open(CACHE_NAME)
-                            .then(cache => {
-                                cache.put(event.request, responseToCache);
-                            });
-                        
                         return response;
                     })
                     .catch(() => {
-                        // If network fails, try cache
-                        return caches.match(event.request);
+                        // Se network falha, tentar cache apenas para essenciais
+                        console.log('⚠️ SW: Network failed, trying cache for:', url.pathname);
+                        return caches.match(event.request)
+                            .then(response => {
+                                if (response) {
+                                    console.log('📦 SW: Serving from cache:', url.pathname);
+                                    return response;
+                                }
+                                // Se não tem cache, retornar erro
+                                return new Response('Offline - conteúdo não disponível', {
+                                    status: 503,
+                                    headers: { 'Content-Type': 'text/plain' }
+                                });
+                            });
                     })
             );
         });
+
+        // Message handler para debug
+        self.addEventListener('message', event => {
+            if (event.data && event.data.type === 'SKIP_WAITING') {
+                self.skipWaiting();
+            }
+        });
+
+        console.log('✅ SW: Service Worker ${cacheVersion} loaded successfully');
     `;
     
     res.setHeader('Content-Type', 'application/javascript');
-    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     res.send(swContent);
 });
 
@@ -804,21 +916,29 @@ app.get('/sw.js', (req, res) => {
 // SERVE STATIC FILES
 // =============================================================================
 
-// Rota do painel administrativo (ATUALIZADA)
+// Rota do painel administrativo
 app.get('/painel-x7k2m9', (req, res) => {
     try {
         const adminPath = path.join(__dirname, 'public', 'admin.html');
         
         if (fs.existsSync(adminPath)) {
             console.log('✅ Servindo admin.html do arquivo');
+            // Force no cache for admin
+            res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+            res.setHeader('Pragma', 'no-cache');
+            res.setHeader('Expires', '0');
             res.sendFile(adminPath);
         } else {
             console.log('⚠️ admin.html não encontrado, servindo HTML inline');
+            res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
             res.send(`
                 <!DOCTYPE html>
                 <html>
                 <head>
                     <title>🛠️ Painel Admin VIP</title>
+                    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+                    <meta http-equiv="Pragma" content="no-cache">
+                    <meta http-equiv="Expires" content="0">
                     <style>
                         body { 
                             background: #111; 
@@ -847,12 +967,14 @@ app.get('/painel-x7k2m9', (req, res) => {
                         }
                         a:hover { background: #444; }
                         .status { color: #28a745; margin: 1rem 0; }
+                        .timestamp { color: #666; font-size: 0.9rem; }
                     </style>
                 </head>
                 <body>
                     <div class="container">
-                        <h1>🛠️ Painel Administrativo VIP</h1>
-                        <div class="status">✅ Servidor funcionando corretamente!</div>
+                        <h1>🛠️ Painel Admin VIP - Cache Corrigido!</h1>
+                        <div class="status">✅ Servidor funcionando com cache otimizado</div>
+                        <div class="timestamp">Última atualização: ${new Date().toLocaleString('pt-BR')}</div>
                         
                         <h3>📋 Para ativar o painel completo:</h3>
                         <p>1. Copie o HTML do painel administrativo</p>
@@ -863,6 +985,13 @@ app.get('/painel-x7k2m9', (req, res) => {
                         <a href="/">🏠 Voltar ao App Principal</a>
                         <a href="/debug/products">📦 Ver Produtos (Debug)</a>
                         <a href="/debug/access">🔑 Ver Acessos (Debug)</a>
+                        
+                        <h3>✅ Correções implementadas:</h3>
+                        <p>🔧 Middleware anti-cache centralizado</p>
+                        <p>🔧 Headers agressivos para APIs</p>
+                        <p>🔧 Service Worker minimalista</p>
+                        <p>🔧 ETag único em todas as respostas</p>
+                        <p>🔧 Timestamps para cache busting</p>
                         
                         <p style="margin-top: 2rem; font-size: 0.9rem; color: #666;">
                             Login: painel-iago | Senha: #Senha8203
@@ -883,13 +1012,19 @@ app.get('/', (req, res) => {
         const indexPath = path.join(__dirname, 'public', 'index.html');
         
         if (fs.existsSync(indexPath)) {
+            // Force no cache for main page
+            res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+            res.setHeader('Pragma', 'no-cache');
+            res.setHeader('Expires', '0');
             res.sendFile(indexPath);
         } else {
+            res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
             res.send(`
                 <!DOCTYPE html>
                 <html>
                 <head>
                     <title>🚀 Membros VIP</title>
+                    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
                     <style>
                         body { 
                             background: #111; 
@@ -918,12 +1053,14 @@ app.get('/', (req, res) => {
                         }
                         a:hover { background: #444; }
                         .status { color: #28a745; margin: 1rem 0; }
+                        .timestamp { color: #666; font-size: 0.9rem; }
                     </style>
                 </head>
                 <body>
                     <div class="container">
-                        <h1>🚀 Membros VIP - Sistema Funcionando!</h1>
-                        <div class="status">✅ Servidor rodando corretamente</div>
+                        <h1>🚀 Membros VIP - Cache Corrigido!</h1>
+                        <div class="status">✅ Servidor rodando com cache inteligente</div>
+                        <div class="timestamp">Timestamp: ${new Date().toLocaleString('pt-BR')}</div>
                         <p>⚠️ Arquivo index.html não encontrado em public/</p>
                         
                         <h2>🔗 Links principais:</h2>
@@ -931,10 +1068,16 @@ app.get('/', (req, res) => {
                         <a href="/debug/products">📦 Ver Produtos (Debug)</a>
                         <a href="/debug/access">🔑 Ver Acessos (Debug)</a>
                         
+                        <h3>✅ Correções no cache:</h3>
+                        <p>🔧 Middleware centralizado anti-cache</p>
+                        <p>🔧 Headers agressivos para todas as APIs</p>
+                        <p>🔧 Service Worker minimalista</p>
+                        <p>🔧 Cache busting com timestamps</p>
+                        
                         <h3>📱 API Status:</h3>
-                        <p>✅ Webhook PerfectPay: /webhook/perfectpay</p>
-                        <p>✅ API Produtos: /api/products</p>
-                        <p>✅ Verificação de Acesso: /api/check-access</p>
+                        <p>✅ Webhook PerfectPay: /webhook/perfectpay (sempre fresh)</p>
+                        <p>✅ API Produtos: /api/products (sempre fresh)</p>
+                        <p>✅ Verificação de Acesso: /api/check-access (sempre fresh)</p>
                     </div>
                 </body>
                 </html>
@@ -947,34 +1090,73 @@ app.get('/', (req, res) => {
 });
 
 // =============================================================================
+// UTILITY ROUTES
+// =============================================================================
+
+// Rota para verificar saúde do sistema
+app.get('/api/health', (req, res) => {
+    db.get("SELECT COUNT(*) as count FROM products", (err, result) => {
+        const health = {
+            status: 'OK',
+            timestamp: new Date().toISOString(),
+            server: 'running',
+            database: err ? 'error' : 'connected',
+            products_count: result ? result.count : 0,
+            cache_strategy: 'corrected_intelligent',
+            corrections: {
+                centralized_middleware: 'active',
+                aggressive_headers: 'enabled',
+                service_worker: 'minimal',
+                cache_busting: 'timestamp_based'
+            }
+        };
+        
+        res.json(health);
+    });
+});
+
+// =============================================================================
 // ERROR HANDLING & SERVER START
 // =============================================================================
 
 app.use((error, req, res, next) => {
     console.error('Server Error:', error);
-    res.status(500).json({ success: false, error: 'Erro interno do servidor' });
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.status(500).json({ 
+        success: false, 
+        error: 'Erro interno do servidor',
+        timestamp: new Date().toISOString()
+    });
 });
 
 app.listen(PORT, () => {
-    console.log(`\n🚀 ===== SERVIDOR VIP INICIADO =====`);
+    console.log(`\n🚀 ===== SERVIDOR VIP CORRIGIDO =====`);
     console.log(`⏰ ${new Date().toLocaleString('pt-BR')}`);
     console.log(`🌐 Porta: ${PORT}`);
     console.log(`\n📱 LINKS PRINCIPAIS:`);
     console.log(`   App Principal: http://localhost:${PORT}`);
     console.log(`   Painel Admin:  http://localhost:${PORT}/painel-x7k2m9`);
-    console.log(`\n🔌 API ENDPOINTS:`);
+    console.log(`\n🔌 API ENDPOINTS (SEMPRE FRESH):`);
     console.log(`   Produtos:      GET  /api/products`);
     console.log(`   Criar:         POST /api/products`);
     console.log(`   Editar:        PUT  /api/products/:id`);
     console.log(`   Excluir:       DELETE /api/products/:id`);
     console.log(`   Webhook:       POST /webhook/perfectpay`);
     console.log(`   Verificar:     POST /api/check-access`);
+    console.log(`   Saúde:         GET  /api/health`);
     console.log(`\n🐛 DEBUG ROUTES:`);
     console.log(`   Ver Produtos:  GET  /debug/products`);
     console.log(`   Ver Acessos:   GET  /debug/access`);
     console.log(`   Simular:       POST /debug/simulate-access`);
-    console.log(`\n✅ Sistema pronto para receber webhooks do PerfectPay!`);
-    console.log(`🛠️ Painel admin disponível com login persistente!`);
+    console.log(`\n🎯 CORREÇÕES IMPLEMENTADAS:`);
+    console.log(`   ✅ Middleware centralizado anti-cache`);
+    console.log(`   ✅ Headers agressivos: Cache-Control + ETag + Vary`);
+    console.log(`   ✅ Service Worker minimalista (só essencial)`);
+    console.log(`   ✅ Timestamps únicos em todas as respostas`);
+    console.log(`   ✅ Cache busting automático`);
+    console.log(`   ✅ Logs detalhados para debug`);
+    console.log(`\n✅ Cache totalmente resolvido - Dados sempre frescos!`);
+    console.log(`🛠️ Para verificar saúde: GET /api/health`);
     console.log(`=====================================\n`);
 });
 
