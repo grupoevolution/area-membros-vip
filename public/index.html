@@ -16,6 +16,11 @@
     <link rel="manifest" href="/manifest.json">
     <link rel="icon" href="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIiBmaWxsPSIjRTUwOTE0Ii8+Cjx0ZXh0IHg9IjE2IiB5PSIyMCIgZmlsbD0id2hpdGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZvbnQtc2l6ZT0iMTAiIGZvbnQtd2VpZ2h0PSJib2xkIj5WSVA8L3RleHQ+Cjwvc3ZnPg==">
     
+    <!-- FORCE NO CACHE FOR THIS PAGE -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    
     <style>
         :root {
             --primary-color: #E50914;
@@ -430,7 +435,7 @@
             display: block;
         }
 
-        /* Header - NOVA VERSÃO */
+        /* Header */
         header {
             background: linear-gradient(180deg, rgba(0,0,0,0.95) 0%, rgba(20,20,20,0.8) 100%);
             padding: 1rem 4%;
@@ -748,7 +753,7 @@
             box-shadow: 0 8px 25px rgba(229, 9, 20, 0.4);
         }
         
-        /* Galeria do Modal */
+        /* Gallery */
         .media-gallery {
             border-top: 1px solid #333;
             padding-top: 1.5rem;
@@ -995,7 +1000,7 @@
                 >
                 <div class="checkbox-container">
                     <input type="checkbox" id="stayConnected" checked>
-                    <label for="stayConnected">Manter conectado</label>
+                    <label for="stayConnected">Manter conectado por 7 dias</label>
                 </div>
                 <button type="submit" class="login-btn" id="loginBtn">
                     ENTRAR
@@ -1026,7 +1031,7 @@
 
     <!-- Main App -->
     <div class="main-app" id="mainApp">
-        <!-- Header - NOVA VERSÃO -->
+        <!-- Header -->
         <header id="mainHeader">
             <div class="header-left">
                 <div class="logo">MEMBROS VIP</div>
@@ -1161,23 +1166,115 @@
 
     <script>
         // =============================================================================
-        // GLOBAL VARIABLES
+        // SISTEMA DE CACHE INTELIGENTE - VERSÃO OTIMIZADA
         // =============================================================================
-        let currentUser = localStorage.getItem('currentUser');
-        let isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
-        let hasShownPwaPopup = localStorage.getItem('hasShownPwaPopup') === 'true';
-        let lastPwaPopupDate = localStorage.getItem('lastPwaPopupDate');
+        
+        // Controle de cache com expiração
+        const CacheManager = {
+            // Configurações de expiração
+            EXPIRATION_TIMES: {
+                LOGIN: 7 * 24 * 60 * 60 * 1000,  // 7 dias
+                PWA_POPUP: 24 * 60 * 60 * 1000,  // 1 dia
+                PRODUCTS: 5 * 60 * 1000,          // 5 minutos (dados dinâmicos)
+                USER_ACCESS: 30 * 60 * 1000       // 30 minutos
+            },
+
+            // Salvar com timestamp
+            set(key, value, expiration = null) {
+                const item = {
+                    value: value,
+                    timestamp: Date.now(),
+                    expiration: expiration || this.EXPIRATION_TIMES[key.toUpperCase()] || 24 * 60 * 60 * 1000
+                };
+                localStorage.setItem(key, JSON.stringify(item));
+                console.log(`💾 Cache salvado: ${key} (expira em ${Math.round(item.expiration / 1000 / 60)} min)`);
+            },
+
+            // Buscar verificando expiração
+            get(key) {
+                try {
+                    const itemStr = localStorage.getItem(key);
+                    if (!itemStr) return null;
+
+                    const item = JSON.parse(itemStr);
+                    const now = Date.now();
+                    
+                    // Verificar se expirou
+                    if (now - item.timestamp > item.expiration) {
+                        console.log(`🗑️ Cache expirado removido: ${key}`);
+                        localStorage.removeItem(key);
+                        return null;
+                    }
+
+                    console.log(`📦 Cache recuperado: ${key}`);
+                    return item.value;
+                } catch (error) {
+                    console.error(`❌ Erro ao ler cache ${key}:`, error);
+                    localStorage.removeItem(key);
+                    return null;
+                }
+            },
+
+            // Limpar cache específico
+            remove(key) {
+                localStorage.removeItem(key);
+                console.log(`🗑️ Cache removido: ${key}`);
+            },
+
+            // Limpar todo o cache
+            clearAll() {
+                const keys = Object.keys(localStorage);
+                keys.forEach(key => {
+                    if (key.startsWith('vip_')) {
+                        localStorage.removeItem(key);
+                    }
+                });
+                console.log('🧹 Todo cache limpo');
+            },
+
+            // Verificar se dados precisam ser atualizados
+            needsRefresh(key) {
+                const itemStr = localStorage.getItem(key);
+                if (!itemStr) return true;
+
+                try {
+                    const item = JSON.parse(itemStr);
+                    const age = Date.now() - item.timestamp;
+                    const threshold = item.expiration * 0.8; // 80% do tempo de vida
+                    
+                    return age > threshold;
+                } catch {
+                    return true;
+                }
+            }
+        };
+
+        // =============================================================================
+        // GLOBAL VARIABLES - VERSÃO OTIMIZADA
+        // =============================================================================
+        let currentUser = CacheManager.get('vip_current_user');
+        let isLoggedIn = CacheManager.get('vip_is_logged_in') === true;
         let deferredPrompt;
 
         // API Base URL
         const API_BASE = window.location.hostname === 'localhost' ? 'http://localhost:3000' : '';
 
         // =============================================================================
-        // PWA FUNCTIONALITY
+        // PWA FUNCTIONALITY - VERSÃO CONTROLADA
         // =============================================================================
+        
+        // Service Worker com cache minimalista
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/sw.js')
-                .then(reg => console.log('✅ Service Worker registrado'))
+                .then(reg => {
+                    console.log('✅ Service Worker registrado');
+                    
+                    // Verificar atualizações periodicamente
+                    reg.addEventListener('updatefound', () => {
+                        console.log('🔄 Nova versão disponível, atualizando...');
+                        window.location.reload();
+                    });
+                })
                 .catch(err => console.log('❌ SW registration failed:', err));
         }
 
@@ -1188,19 +1285,16 @@
         });
 
         function shouldShowPwaPopup() {
-            const today = new Date().toDateString();
-            
-            // Se nunca mostrou OU é um novo dia
-            if (!hasShownPwaPopup || lastPwaPopupDate !== today) {
-                return true;
-            }
-            
-            return false;
+            const lastShown = CacheManager.get('vip_pwa_last_shown');
+            if (!lastShown) return true;
+
+            const oneDayAgo = Date.now() - (24 * 60 * 60 * 1000);
+            return lastShown < oneDayAgo;
         }
 
         function showPwaPopup() {
-            if (!shouldShowPwaPopup()) {
-                console.log('📱 PWA popup já foi mostrado hoje');
+            if (!shouldShowPwaPopup() || !deferredPrompt) {
+                console.log('📱 PWA popup não deve ser mostrado agora');
                 return;
             }
             
@@ -1208,16 +1302,12 @@
             const popup = document.getElementById('pwaInstallPopup');
             popup.style.display = 'flex';
             
-            // Marcar como mostrado hoje
-            const today = new Date().toDateString();
-            localStorage.setItem('hasShownPwaPopup', 'true');
-            localStorage.setItem('lastPwaPopupDate', today);
-            hasShownPwaPopup = true;
-            lastPwaPopupDate = today;
+            // Marcar como mostrado
+            CacheManager.set('vip_pwa_last_shown', Date.now(), CacheManager.EXPIRATION_TIMES.PWA_POPUP);
         }
 
         function installPWAFromPopup() {
-            console.log('📱 Tentando instalar PWA do popup');
+            console.log('📱 Tentando instalar PWA');
             if (deferredPrompt) {
                 deferredPrompt.prompt();
                 deferredPrompt.userChoice.then((choiceResult) => {
@@ -1230,7 +1320,6 @@
                     closePwaPopup();
                 });
             } else {
-                // Fallback para dispositivos que não suportam prompt automático
                 alert('Para instalar o app:\n\n📱 Android: Menu do navegador → "Adicionar à tela inicial"\n🍎 iOS: Botão compartilhar → "Adicionar à tela de início"');
                 closePwaPopup();
             }
@@ -1242,11 +1331,26 @@
         }
 
         // =============================================================================
-        // LOGIN FUNCTIONALITY
+        // LOGIN FUNCTIONALITY - COM EXPIRAÇÃO DE 7 DIAS
         // =============================================================================
+        
         document.addEventListener('DOMContentLoaded', function() {
+            console.log('🚀 App iniciado');
+            
+            // Limpar cache antigo (versão de migração)
+            const oldKeys = ['currentUser', 'isLoggedIn', 'hasShownPwaPopup', 'lastPwaPopupDate'];
+            oldKeys.forEach(key => {
+                if (localStorage.getItem(key)) {
+                    localStorage.removeItem(key);
+                    console.log(`🗑️ Cache antigo removido: ${key}`);
+                }
+            });
+
             if (isLoggedIn && currentUser) {
+                console.log('🔑 Login automático detectado');
                 autoLogin();
+            } else {
+                console.log('🔐 Usuário não logado');
             }
         });
 
@@ -1263,8 +1367,10 @@
                 
                 setTimeout(() => {
                     if (stayConnected) {
-                        localStorage.setItem('currentUser', email);
-                        localStorage.setItem('isLoggedIn', 'true');
+                        // Salvar com expiração de 7 dias
+                        CacheManager.set('vip_current_user', email, CacheManager.EXPIRATION_TIMES.LOGIN);
+                        CacheManager.set('vip_is_logged_in', true, CacheManager.EXPIRATION_TIMES.LOGIN);
+                        console.log('💾 Login salvo por 7 dias');
                     }
                     
                     currentUser = email;
@@ -1279,6 +1385,13 @@
         });
 
         function autoLogin() {
+            // Verificar se o login ainda é válido
+            if (!CacheManager.get('vip_current_user') || !CacheManager.get('vip_is_logged_in')) {
+                console.log('🔒 Login expirado, redirecionando');
+                handleLogout();
+                return;
+            }
+            
             performLogin();
         }
 
@@ -1287,24 +1400,29 @@
             document.getElementById('mainApp').classList.add('active');
             document.getElementById('userEmail').textContent = currentUser;
             
+            // Carregar produtos sempre fresh
             loadProducts();
             
-            // Mostrar banner PWA após login se disponível e não foi mostrado ainda
-            if (!hasShownPwaPopup && deferredPrompt) {
-                setTimeout(() => {
-                    console.log('📱 Mostrando banner PWA após login');
-                    showPwaInstallBanner();
-                }, 3000);
-            }
+            // Mostrar PWA popup se necessário (após 3 segundos)
+            setTimeout(() => {
+                if (shouldShowPwaPopup() && deferredPrompt) {
+                    showPwaPopup();
+                }
+            }, 3000);
         }
 
         function handleLogout() {
-            if (confirm('Deseja realmente sair?')) {
-                localStorage.removeItem('currentUser');
-                localStorage.removeItem('isLoggedIn');
-                localStorage.removeItem('hasShownPwaPopup');
-                location.reload();
-            }
+            if (!confirm('Deseja realmente sair?')) return;
+            
+            // Limpar todo o cache do usuário
+            CacheManager.clearAll();
+            
+            // Reset variables
+            currentUser = null;
+            isLoggedIn = false;
+            
+            console.log('👋 Logout realizado');
+            location.reload();
         }
 
         // =============================================================================
@@ -1322,7 +1440,7 @@
         }
 
         // =============================================================================
-        // PRODUCT MODAL FUNCTIONALITY - VERSÃO CORRIGIDA
+        // PRODUCT MODAL FUNCTIONALITY
         // =============================================================================
         async function openModal(product) {
             console.log('🔍 Abrindo modal para produto:', product.name);
@@ -1342,14 +1460,12 @@
                 modalVideo.style.display = 'none';
             }
             
-            // NOVA LÓGICA PARA BOTÕES
+            // Configurar botão baseado na categoria e acesso
             const modalButton = document.getElementById('modalButton');
             
-            // Verificar se está na categoria "MEUS PRODUTOS"
             if (product.category === 'meus_produtos') {
                 console.log('✅ Produto em MEUS PRODUTOS - sempre liberar acesso');
                 
-                // Sempre mostrar botão de acessar para produtos em "meus produtos"
                 if (product.access_url) {
                     modalButton.innerHTML = `
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -1378,41 +1494,51 @@
                 console.log('🔒 Produto em outra categoria - verificar acesso');
                 
                 const planos = [product.plano_1, product.plano_2, product.plano_3].filter(p => p);
-                let hasAccess = planos.length === 0; // Se não tem planos, tem acesso livre
+                let hasAccess = planos.length === 0;
                 
                 if (planos.length > 0 && currentUser) {
-                    console.log('🔒 Verificando acesso para planos:', planos);
+                    // Verificar cache de acesso primeiro
+                    const cacheKey = `vip_access_${currentUser}_${planos.join('_')}`;
+                    let cachedAccess = CacheManager.get(cacheKey);
                     
-                    // Verificar acesso para qualquer um dos planos
-                    for (const plano of planos) {
-                        try {
-                            const response = await fetch(`${API_BASE}/api/check-access`, {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json'
-                                },
-                                body: JSON.stringify({
-                                    email: currentUser,
-                                    plano_code: plano
-                                })
-                            });
-                            
-                            const data = await response.json();
-                            
-                            if (data.hasAccess) {
-                                hasAccess = true;
-                                console.log(`✅ Acesso liberado para plano: ${plano}`);
-                                break;
+                    if (cachedAccess !== null) {
+                        hasAccess = cachedAccess;
+                        console.log(`📦 Acesso do cache: ${hasAccess ? 'LIBERADO' : 'NEGADO'}`);
+                    } else {
+                        // Verificar acesso via API
+                        for (const plano of planos) {
+                            try {
+                                const response = await fetch(`${API_BASE}/api/check-access`, {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'Cache-Control': 'no-cache'
+                                    },
+                                    body: JSON.stringify({
+                                        email: currentUser,
+                                        plano_code: plano
+                                    })
+                                });
+                                
+                                const data = await response.json();
+                                
+                                if (data.hasAccess) {
+                                    hasAccess = true;
+                                    console.log(`✅ Acesso liberado para plano: ${plano}`);
+                                    break;
+                                }
+                            } catch (error) {
+                                console.error('❌ Erro ao verificar acesso:', error);
                             }
-                        } catch (error) {
-                            console.error('❌ Erro ao verificar acesso:', error);
                         }
+                        
+                        // Salvar resultado no cache por 30 minutos
+                        CacheManager.set(cacheKey, hasAccess, CacheManager.EXPIRATION_TIMES.USER_ACCESS);
                     }
                 }
                 
                 // Configurar botão baseado no acesso
                 if (hasAccess) {
-                    // Usuário TEM acesso
                     if (product.access_url) {
                         modalButton.innerHTML = `
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -1437,7 +1563,6 @@
                         };
                     }
                 } else {
-                    // Usuário NÃO TEM acesso - botão "EU QUERO"
                     if (product.buy_url) {
                         modalButton.innerHTML = `
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -1533,24 +1658,61 @@
         }
 
         // =============================================================================
-        // PRODUCTS FUNCTIONALITY
+        // PRODUCTS FUNCTIONALITY - CACHE INTELIGENTE
         // =============================================================================
         async function loadProducts() {
             try {
                 console.log('📦 Carregando produtos...');
-                const response = await fetch(`${API_BASE}/api/products`);
+                
+                // Verificar se precisa atualizar dados
+                const cacheKey = 'vip_products_data';
+                const cachedProducts = CacheManager.get(cacheKey);
+                
+                // Se tem cache e não precisa de refresh, usar cache
+                if (cachedProducts && !CacheManager.needsRefresh(cacheKey)) {
+                    console.log('📦 Usando produtos do cache');
+                    renderProducts(cachedProducts);
+                    return;
+                }
+                
+                // Buscar dados frescos da API
+                console.log('🔄 Buscando produtos atualizados da API...');
+                const response = await fetch(`${API_BASE}/api/products?t=${Date.now()}`, {
+                    method: 'GET',
+                    headers: {
+                        'Cache-Control': 'no-cache, no-store, must-revalidate',
+                        'Pragma': 'no-cache',
+                        'Expires': '0'
+                    }
+                });
+                
                 const data = await response.json();
                 
                 if (data.success) {
-                    console.log(`✅ ${data.products.length} produtos carregados`);
+                    console.log(`✅ ${data.products.length} produtos carregados da API`);
+                    
+                    // Salvar no cache por 5 minutos
+                    CacheManager.set(cacheKey, data.products, CacheManager.EXPIRATION_TIMES.PRODUCTS);
+                    
                     renderProducts(data.products);
                 } else {
                     console.log('⚠️ API não retornou sucesso, usando dados mock');
                     renderMockProducts();
                 }
             } catch (error) {
-                console.log('⚠️ API não disponível, usando dados mock');
-                renderMockProducts();
+                console.log('⚠️ API não disponível, tentando cache ou dados mock');
+                
+                // Tentar usar cache mesmo que seja antigo
+                const cacheKey = 'vip_products_data';
+                const cachedProducts = CacheManager.get(cacheKey);
+                
+                if (cachedProducts) {
+                    console.log('📦 Usando cache antigo como fallback');
+                    renderProducts(cachedProducts);
+                } else {
+                    console.log('📦 Usando dados mock como fallback');
+                    renderMockProducts();
+                }
             }
         }
 
@@ -1598,6 +1760,10 @@
                     ]
                 }
             ];
+            
+            // Salvar mock no cache temporariamente
+            const cacheKey = 'vip_products_data';
+            CacheManager.set(cacheKey, mockProducts, 60000); // 1 minuto apenas
             
             renderProducts(mockProducts);
         }
@@ -1650,6 +1816,8 @@
                     `;
                 }
             });
+            
+            console.log('✅ Produtos renderizados com sucesso');
         }
 
         function createProductCard(product) {
@@ -1659,9 +1827,9 @@
                 // Primeiro abrir o modal
                 openModal(product);
                 
-                // Depois verificar se deve mostrar popup PWA
+                // Depois verificar se deve mostrar popup PWA (só na primeira interação do dia)
                 setTimeout(() => {
-                    if (shouldShowPwaPopup()) {
+                    if (shouldShowPwaPopup() && deferredPrompt) {
                         showPwaPopup();
                     }
                 }, 1000);
@@ -1689,7 +1857,7 @@
             `;
             card.appendChild(overlay);
             
-            // NOVA LÓGICA PARA CADEADOS - só aparece fora de "meus produtos"
+            // Adicionar cadeado apenas fora de "meus produtos"
             if (product.category !== 'meus_produtos') {
                 const planos = [product.plano_1, product.plano_2, product.plano_3].filter(p => p);
                 if (planos.length > 0) {
@@ -1725,6 +1893,49 @@
                 return;
             }
         }
+
+        // =============================================================================
+        // UTILITY FUNCTIONS
+        // =============================================================================
+        
+        // Função para forçar atualização de dados
+        function forceRefresh() {
+            console.log('🔄 Forçando atualização...');
+            
+            // Limpar cache de produtos
+            CacheManager.remove('vip_products_data');
+            
+            // Limpar cache de acesso
+            const keys = Object.keys(localStorage);
+            keys.forEach(key => {
+                if (key.startsWith('vip_access_')) {
+                    CacheManager.remove(key);
+                }
+            });
+            
+            // Recarregar produtos
+            loadProducts();
+        }
+
+        // Função para debug do cache
+        function debugCache() {
+            console.log('🐛 DEBUG DO CACHE:');
+            const keys = Object.keys(localStorage);
+            keys.forEach(key => {
+                if (key.startsWith('vip_')) {
+                    const value = CacheManager.get(key);
+                    console.log(`${key}:`, value);
+                }
+            });
+        }
+
+        // Expor funções globais para debug
+        window.VIP_DEBUG = {
+            forceRefresh,
+            debugCache,
+            clearAllCache: () => CacheManager.clearAll(),
+            loadProducts
+        };
 
         // =============================================================================
         // EVENT LISTENERS
@@ -1765,7 +1976,33 @@
             }
         });
 
-        console.log('🚀 App VIP carregado com sucesso!');
+        // Detectar quando a aba fica ativa novamente (para refresh inteligente)
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden && isLoggedIn) {
+                console.log('👁️ App voltou ao foco');
+                
+                // Se faz mais de 2 minutos que carregou os produtos, recarregar
+                const cacheKey = 'vip_products_data';
+                if (CacheManager.needsRefresh(cacheKey)) {
+                    console.log('🔄 Atualizando produtos por estar desatualizado');
+                    loadProducts();
+                }
+            }
+        });
+
+        // Auto-refresh produtos a cada 5 minutos quando ativo
+        setInterval(() => {
+            if (!document.hidden && isLoggedIn) {
+                const cacheKey = 'vip_products_data';
+                if (CacheManager.needsRefresh(cacheKey)) {
+                    console.log('🔄 Auto-refresh de produtos');
+                    loadProducts();
+                }
+            }
+        }, 5 * 60 * 1000); // 5 minutos
+
+        console.log('🚀 App VIP Otimizado carregado com sucesso!');
+        console.log('🐛 Para debug use: VIP_DEBUG.debugCache() ou VIP_DEBUG.forceRefresh()');
     </script>
 </body>
 </html>
