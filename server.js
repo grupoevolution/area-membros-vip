@@ -771,16 +771,18 @@ app.get('/manifest.json', (req, res) => {
         "scope": "/",
         "icons": [
             {
-                "src": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTkyIiBoZWlnaHQ9IjE5MiIgdmlld0JveD0iMCAwIDE5MiAxOTIiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CiAgPHJlY3Qgd2lkdGg9IjE5MiIgaGVpZ2h0PSIxOTIiIGZpbGw9IiNFNTA5MTQiLz4KICA8dGV4dCB4PSI5NiIgeT0iMTA2IiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC1zaXplPSIzNiIgZm9udC13ZWlnaHQ9ImJvbGQiPldJUDwvdGV4dD4KPC9zdmc+",
-                "type": "image/svg+xml",
-                "sizes": "192x192"
-            },
-            {
-                "src": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTEyIiBoZWlnaHQ9IjUxMiIgdmlld0JveD0iMCAwIDUxMiA1MTIiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CiAgPHJlY3Qgd2lkdGg9IjUxMiIgaGVpZ2h0PSI1MTIiIGZpbGw9IiNFNTA5MTQiLz4KICA8dGV4dCB4PSIyNTYiIHk9IjI4NiIgZmlsbD0id2hpdGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZvbnQtc2l6ZT0iOTYiIGZvbnQtd2VpZ2h0PSJib2xkIj5WSVA8L3RleHQ+Cjwvc3ZnPg==",
-                "type": "image/svg+xml",
-                "sizes": "512x512"
-            }
-        ]
+    src: "https://e-volutionn.com/wp-content/uploads/2025/08/Design-sem-nome-8-2.png?v=1",
+    type: "image/png",
+    sizes: "192x192",
+    purpose: "any"
+  },
+  {
+    src: "https://e-volutionn.com/wp-content/uploads/2025/08/Design-sem-nome-8-2.png?v=1",
+    type: "image/png",
+    sizes: "512x512",
+    purpose: "any maskable"
+  }
+]
     };
     
     // Cache manifest por 1 hora apenas
