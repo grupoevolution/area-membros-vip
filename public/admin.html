@@ -4,6 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Painel Administrativo - Membros VIP</title>
+    
+    <!-- CORREÇÃO DE CACHE: Meta tags anti-cache agressivas -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate, proxy-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <meta http-equiv="Last-Modified" content="0">
+    <meta http-equiv="If-Modified-Since" content="0">
+    
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -839,7 +847,8 @@
                             <div class="form-group">
                                 <label for="editPlano3">Código Plano 3</label>
                                 <input type="text" id="editPlano3" placeholder="Ex: PPLQQLST8">
-                            </div> </div>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="gallery-section">
@@ -865,7 +874,7 @@
 
     <script>
         // =============================================================================
-        // GLOBAL VARIABLES
+        // CORREÇÃO DE CACHE: VARIÁVEIS GLOBAIS E CONFIGURAÇÕES ANTI-CACHE
         // =============================================================================
         let isAdmin = localStorage.getItem('isVipAdmin') === 'true';
         let allProducts = [];
@@ -874,17 +883,52 @@
         // API BASE URL
         const API_BASE = window.location.hostname === 'localhost' ? 'http://localhost:3000' : '';
 
+        // CORREÇÃO DE CACHE: Função para gerar cache busting único
+        function generateCacheBuster() {
+            return `cb=${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        }
+
+        // CORREÇÃO DE CACHE: Limpar todos os caches do navegador
+        function clearAllCaches() {
+            // Limpar localStorage relacionado ao admin
+            Object.keys(localStorage).forEach(key => {
+                if (key.includes('admin') || key.includes('product') || key.includes('cache')) {
+                    localStorage.removeItem(key);
+                }
+            });
+            
+            // Limpar sessionStorage
+            sessionStorage.clear();
+            
+            console.log('🧹 Cache local limpo!');
+        }
+
         // =============================================================================
-        // UTILITY FUNCTIONS
+        // UTILITY FUNCTIONS COM CORREÇÃO DE CACHE
         // =============================================================================
         async function apiRequest(url, options = {}) {
             try {
-                const response = await fetch(API_BASE + url, {
-                    headers: {
-                        'Content-Type': 'application/json',
-                        ...options.headers
-                    },
-                    ...options
+                // CORREÇÃO DE CACHE: Adicionar cache busting na URL
+                const separator = url.includes('?') ? '&' : '?';
+                const urlWithCacheBuster = `${url}${separator}${generateCacheBuster()}`;
+                
+                // CORREÇÃO DE CACHE: Headers anti-cache agressivos
+                const antiCacheHeaders = {
+                    'Cache-Control': 'no-cache, no-store, must-revalidate, proxy-revalidate',
+                    'Pragma': 'no-cache',
+                    'Expires': '0',
+                    'If-Modified-Since': '0',
+                    'If-None-Match': '*',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Content-Type': 'application/json',
+                    ...options.headers
+                };
+                
+                const response = await fetch(API_BASE + urlWithCacheBuster, {
+                    ...options,
+                    headers: antiCacheHeaders,
+                    // CORREÇÃO DE CACHE: Force no-cache
+                    cache: 'no-store'
                 });
                 
                 const data = await response.json();
@@ -893,6 +937,7 @@
                     throw new Error(data.error || `HTTP error! status: ${response.status}`);
                 }
                 
+                console.log(`✅ API Request fresh: ${url} - ${data.timestamp || 'no timestamp'}`);
                 return data;
             } catch (error) {
                 console.error('API Error:', error);
@@ -925,10 +970,13 @@
         }
 
         // =============================================================================
-        // ADMIN LOGIN & SESSION
+        // ADMIN LOGIN & SESSION COM CORREÇÃO DE CACHE
         // =============================================================================
         document.addEventListener('DOMContentLoaded', () => {
             console.log('🚀 Admin panel loading...');
+            
+            // CORREÇÃO DE CACHE: Limpar caches na inicialização
+            clearAllCaches();
             
             // Check if already logged in
             if (isAdmin) {
@@ -948,8 +996,11 @@
         function showAdminPanel() {
             document.getElementById('adminLogin').style.display = 'none';
             document.getElementById('adminPanel').classList.add('active');
-            loadProducts();
-            loadStats();
+            
+            // CORREÇÃO DE CACHE: Force reload dos dados sempre que abrir o painel
+            console.log('🔄 Forçando reload completo dos dados...');
+            loadProducts(true);  // Force reload
+            loadStats(true);     // Force reload
         }
 
         // Admin Login Form
@@ -994,17 +1045,25 @@
         async function handleLogout() {
             if (!confirm('Deseja realmente sair do painel administrativo?')) return;
             
+            // CORREÇÃO DE CACHE: Limpar todos os caches ao sair
+            clearAllCaches();
             localStorage.removeItem('isVipAdmin');
             isAdmin = false;
-            location.reload();
+            
+            // CORREÇÃO DE CACHE: Force reload da página para garantir dados frescos
+            window.location.href = window.location.href.split('?')[0] + '?' + generateCacheBuster();
         }
 
         // =============================================================================
-        // STATS LOADING
+        // STATS LOADING COM CORREÇÃO DE CACHE
         // =============================================================================
-        async function loadStats() {
+        async function loadStats(forceReload = false) {
+            if (forceReload) {
+                console.log('🔄 Forçando reload das estatísticas...');
+            }
+            
             try {
-                // Load total products
+                // Load total products with cache busting
                 const productsResult = await apiRequest('/api/products');
                 const products = productsResult.products || [];
                 
@@ -1012,13 +1071,15 @@
                 document.getElementById('meusProducts').textContent = products.filter(p => p.category === 'meus_produtos').length;
                 document.getElementById('premiumProducts').textContent = products.filter(p => p.plano_1 || p.plano_2 || p.plano_3).length;
                 
-                // Load access stats
+                // Load access stats with cache busting
                 try {
                     const accessResult = await apiRequest('/debug/access');
                     document.getElementById('totalAccess').textContent = accessResult.access_records?.length || 0;
                 } catch {
                     document.getElementById('totalAccess').textContent = '0';
                 }
+                
+                console.log('✅ Estatísticas carregadas fresh:', new Date().toLocaleTimeString());
                 
             } catch (error) {
                 console.error('Error loading stats:', error);
@@ -1031,18 +1092,27 @@
         }
 
         // =============================================================================
-        // PRODUCTS MANAGEMENT
+        // PRODUCTS MANAGEMENT COM CORREÇÃO DE CACHE
         // =============================================================================
 
-        // Load products
-        async function loadProducts() {
+        // Load products with force reload option
+        async function loadProducts(forceReload = false) {
             try {
+                if (forceReload) {
+                    console.log('🔄 Forçando reload dos produtos...');
+                    // CORREÇÃO DE CACHE: Limpar array antes de recarregar
+                    allProducts = [];
+                }
+                
                 console.log('📦 Loading products...');
                 const result = await apiRequest('/api/products');
                 allProducts = result.products || [];
-                console.log(`✅ Loaded ${allProducts.length} products`);
-                renderProductsList();
-                loadStats(); // Refresh stats
+                console.log(`✅ Loaded ${allProducts.length} products fresh - ${result.timestamp || 'no timestamp'}`);
+                
+                // CORREÇÃO DE CACHE: Force re-render sempre
+                renderProductsList(true);
+                loadStats(true); // Refresh stats too
+                
             } catch (error) {
                 console.error('Error loading products:', error);
                 showMessage('Erro ao carregar produtos: ' + error.message, 'error');
@@ -1051,17 +1121,24 @@
             }
         }
 
-        // Render products list
-        function renderProductsList() {
+        // Render products list with force option
+        function renderProductsList(forceRender = false) {
             const container = document.getElementById('productsList');
+            
+            if (forceRender) {
+                console.log('🔄 Forçando re-render da lista de produtos...');
+            }
             
             if (allProducts.length === 0) {
                 container.innerHTML = '<p style="text-align: center; color: #999; padding: 2rem;">Nenhum produto cadastrado ainda.</p>';
                 return;
             }
             
+            // CORREÇÃO DE CACHE: Adicionar timestamp na renderização para garantir refresh
+            const renderTimestamp = new Date().toLocaleTimeString();
+            
             container.innerHTML = allProducts.map(product => `
-                <div class="product-item">
+                <div class="product-item" data-render="${renderTimestamp}">
                     <div class="product-info">
                         <h4>${product.name}</h4>
                         <p>${getCategoryName(product.category)} • R$ ${(product.price || 0).toFixed(2)}</p>
@@ -1078,6 +1155,8 @@
                     </div>
                 </div>
             `).join('');
+            
+            console.log(`✅ Lista renderizada fresh às ${renderTimestamp}`);
         }
 
         // Get category display name
@@ -1094,7 +1173,7 @@
         }
 
         // =============================================================================
-        // ADD PRODUCT
+        // ADD PRODUCT COM CORREÇÃO DE CACHE
         // =============================================================================
 
         // Gallery management for add form
@@ -1128,7 +1207,7 @@
             });
         });
 
-        // Add product form handler
+        // Add product form handler with cache fixes
         document.getElementById('addProductForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             
@@ -1166,6 +1245,7 @@
                 
                 showMessage('Produto adicionado com sucesso!', 'success');
                 document.getElementById('addProductForm').reset();
+                
                 // Reset gallery to one empty item
                 document.getElementById('galleryItems').innerHTML = `
                     <div class="gallery-item">
@@ -1177,6 +1257,7 @@
                         <button type="button" class="btn btn-danger remove-gallery-item">Remover</button>
                     </div>
                 `;
+                
                 // Re-add event listener
                 document.querySelector('.remove-gallery-item').addEventListener('click', (e) => {
                     if (document.querySelectorAll('.gallery-item').length > 1) {
@@ -1184,14 +1265,17 @@
                     }
                 });
                 
-                await loadProducts();
+                // CORREÇÃO DE CACHE: Force reload completo após adicionar
+                console.log('🔄 Produto adicionado - recarregando dados...');
+                await loadProducts(true);  // Force reload
+                
             } catch (error) {
                 showMessage('Erro ao adicionar produto: ' + error.message, 'error');
             }
         });
 
         // =============================================================================
-        // EDIT PRODUCT
+        // EDIT PRODUCT COM CORREÇÃO DE CACHE
         // =============================================================================
 
         // Open edit modal
@@ -1264,7 +1348,7 @@
             });
         }
 
-        // Edit product form handler
+        // Edit product form handler with cache fixes
         document.getElementById('editProductForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             
@@ -1304,17 +1388,21 @@
                 
                 showMessage('Produto atualizado com sucesso!', 'success');
                 closeEditModal();
-                await loadProducts();
+                
+                // CORREÇÃO DE CACHE: Force reload completo após editar
+                console.log('🔄 Produto editado - recarregando dados...');
+                await loadProducts(true);  // Force reload
+                
             } catch (error) {
                 showMessage('Erro ao atualizar produto: ' + error.message, 'error');
             }
         });
 
         // =============================================================================
-        // DELETE PRODUCT
+        // DELETE PRODUCT COM CORREÇÃO DE CACHE
         // =============================================================================
 
-        // Delete product
+        // Delete product with cache fixes
         async function deleteProduct(productId) {
             const product = allProducts.find(p => p.id == productId);
             const productName = product ? product.name : `ID ${productId}`;
@@ -1328,14 +1416,18 @@
                 });
                 
                 showMessage('Produto excluído com sucesso!', 'success');
-                await loadProducts();
+                
+                // CORREÇÃO DE CACHE: Force reload completo após deletar
+                console.log('🔄 Produto excluído - recarregando dados...');
+                await loadProducts(true);  // Force reload
+                
             } catch (error) {
                 showMessage('Erro ao excluir produto: ' + error.message, 'error');
             }
         }
 
         // =============================================================================
-        // EVENT LISTENERS
+        // EVENT LISTENERS COM CORREÇÃO DE CACHE
         // =============================================================================
 
         // Close modal when clicking outside
@@ -1345,6 +1437,24 @@
                 closeEditModal();
             }
         };
+
+        // CORREÇÃO DE CACHE: Force refresh da página a cada 5 minutos para garantir dados frescos
+        setInterval(() => {
+            console.log('🔄 Auto-refresh dos dados...');
+            if (isAdmin && document.getElementById('adminPanel').classList.contains('active')) {
+                loadProducts(true);
+                loadStats(true);
+            }
+        }, 5 * 60 * 1000); // 5 minutos
+
+        // CORREÇÃO DE CACHE: Detectar quando a aba volta ao foco e recarregar dados
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden && isAdmin && document.getElementById('adminPanel').classList.contains('active')) {
+                console.log('🔄 Aba voltou ao foco - recarregando dados...');
+                loadProducts(true);
+                loadStats(true);
+            }
+        });
 
         // Initialize remove gallery item listeners for the first item
         document.addEventListener('DOMContentLoaded', () => {
@@ -1360,7 +1470,7 @@
             }
         });
 
-        console.log('🎉 Admin panel script loaded successfully!');
+        console.log('🎉 Admin panel script loaded successfully with cache fixes!');
     </script>
 </body>
 </html>
