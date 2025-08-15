@@ -12,7 +12,23 @@ const PORT = process.env.PORT || 3000;
 // =============================================================================
 app.use(cors());
 app.use(express.json());
-app.use(express.static('public'));
+
+// Static files with correct cache headers
+app.use(express.static('public', {
+    setHeaders: (res, path) => {
+        // No cache for HTML files (always fresh)
+        if (path.endsWith('.html')) {
+            res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+            res.setHeader('Pragma', 'no-cache');
+            res.setHeader('Expires', '0');
+        }
+        // Short cache for other static files
+        else {
+            res.setHeader('Cache-Control', 'public, max-age=300'); // 5 minutes
+        }
+    }
+}));
+
 app.use('/uploads', express.static('uploads'));
 
 // Create uploads directory if it doesn't exist
@@ -225,8 +241,13 @@ app.post('/debug/simulate-access', (req, res) => {
 // API ROUTES - PRODUCTS
 // =============================================================================
 
-// Get all products with their media
+// Get all products with their media (NO CACHE)
 app.get('/api/products', (req, res) => {
+    // Force no cache for API responses
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    
     const query = `
         SELECT p.*, 
                GROUP_CONCAT(
@@ -694,35 +715,88 @@ app.get('/manifest.json', (req, res) => {
 });
 
 app.get('/sw.js', (req, res) => {
+    // Generate dynamic cache name with timestamp for auto-updates
+    const cacheVersion = Date.now();
     const swContent = `
-        const CACHE_NAME = 'vip-app-v2';
+        const CACHE_NAME = 'vip-app-v${cacheVersion}';
         const urlsToCache = [
             '/',
-            '/manifest.json',
-            '/api/products'
+            '/manifest.json'
         ];
 
         self.addEventListener('install', event => {
+            console.log('🔧 SW: Installing new version');
             event.waitUntil(
                 caches.open(CACHE_NAME)
-                    .then(cache => cache.addAll(urlsToCache))
+                    .then(cache => {
+                        console.log('📦 SW: Caching core files');
+                        return cache.addAll(urlsToCache);
+                    })
+                    .then(() => {
+                        console.log('✅ SW: Skip waiting');
+                        return self.skipWaiting();
+                    })
+            );
+        });
+
+        self.addEventListener('activate', event => {
+            console.log('🚀 SW: Activating new version');
+            event.waitUntil(
+                caches.keys().then(cacheNames => {
+                    return Promise.all(
+                        cacheNames.map(cacheName => {
+                            if (cacheName !== CACHE_NAME) {
+                                console.log('🗑️ SW: Deleting old cache:', cacheName);
+                                return caches.delete(cacheName);
+                            }
+                        })
+                    );
+                }).then(() => {
+                    console.log('✅ SW: Claiming clients');
+                    return self.clients.claim();
+                })
             );
         });
 
         self.addEventListener('fetch', event => {
+            const url = new URL(event.request.url);
+            
+            // Never cache API calls - always fetch fresh
+            if (url.pathname.startsWith('/api/') || 
+                url.pathname.startsWith('/debug/') || 
+                url.pathname.startsWith('/webhook/')) {
+                event.respondWith(fetch(event.request));
+                return;
+            }
+            
+            // Cache other resources with network-first strategy
             event.respondWith(
-                caches.match(event.request)
+                fetch(event.request)
                     .then(response => {
-                        if (response) {
-                            return response;
+                        // Don't cache if not ok
+                        if (!response.ok) {
+                            return caches.match(event.request) || response;
                         }
-                        return fetch(event.request);
+                        
+                        // Clone response for cache
+                        const responseToCache = response.clone();
+                        caches.open(CACHE_NAME)
+                            .then(cache => {
+                                cache.put(event.request, responseToCache);
+                            });
+                        
+                        return response;
+                    })
+                    .catch(() => {
+                        // If network fails, try cache
+                        return caches.match(event.request);
                     })
             );
         });
     `;
     
     res.setHeader('Content-Type', 'application/javascript');
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     res.send(swContent);
 });
 
