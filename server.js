@@ -1130,6 +1130,313 @@ app.use((error, req, res, next) => {
         timestamp: new Date().toISOString()
     });
 });
+// =============================================================================
+// ADICIONE ESTES ENDPOINTS NO SEU SERVER.JS APÓS OS OUTROS ENDPOINTS
+// =============================================================================
+
+// ENDPOINT PRINCIPAL - Buscar produtos que o usuário tem acesso
+app.post('/api/user/products', (req, res) => {
+    const { email } = req.body;
+    
+    console.log(`\n🔍 ===== BUSCANDO PRODUTOS DO USUÁRIO =====`);
+    console.log(`📧 Email: ${email}`);
+    console.log(`⏰ Hora: ${new Date().toLocaleTimeString()}`);
+    
+    if (!email) {
+        console.log('❌ Email não fornecido');
+        return res.json({ 
+            success: true, 
+            products: [],
+            userProducts: [],
+            message: 'Email é obrigatório'
+        });
+    }
+    
+    // Primeiro, buscar TODOS os acessos ativos do usuário
+    const accessQuery = `
+        SELECT DISTINCT plan_code, plan_name, created_at 
+        FROM user_access 
+        WHERE email = ? AND status = 'active'
+        ORDER BY created_at DESC
+    `;
+    
+    db.all(accessQuery, [email], (err, userAccess) => {
+        if (err) {
+            console.error('❌ Erro ao buscar acessos:', err);
+            return res.status(500).json({ 
+                success: false, 
+                error: 'Erro ao buscar acessos'
+            });
+        }
+        
+        console.log(`📊 Acessos encontrados: ${userAccess.length}`);
+        if (userAccess.length > 0) {
+            console.log('📋 Planos liberados:', userAccess.map(a => a.plan_code).join(', '));
+        }
+        
+        // Buscar TODOS os produtos para exibir
+        const allProductsQuery = `
+            SELECT p.*, 
+                   GROUP_CONCAT(
+                       json_object('type', pm.type, 'url', pm.url, 'order_index', pm.order_index)
+                       ORDER BY pm.order_index
+                   ) as gallery_json
+            FROM products p 
+            LEFT JOIN product_media pm ON p.id = pm.product_id 
+            GROUP BY p.id 
+            ORDER BY p.updated_at DESC, p.created_at DESC
+        `;
+        
+        db.all(allProductsQuery, [], (err, allProducts) => {
+            if (err) {
+                console.error('❌ Erro ao buscar produtos:', err);
+                return res.status(500).json({ 
+                    success: false, 
+                    error: 'Erro ao buscar produtos'
+                });
+            }
+            
+            // Array para armazenar produtos que vão para "MEUS PRODUTOS"
+            const userProducts = [];
+            
+            // Processar cada produto
+            const processedProducts = allProducts.map(row => {
+                const product = { ...row };
+                
+                // Parse gallery JSON
+                if (product.gallery_json) {
+                    try {
+                        const galleryItems = product.gallery_json.split(',').map(item => JSON.parse(item));
+                        product.gallery = galleryItems.sort((a, b) => a.order_index - b.order_index);
+                    } catch (e) {
+                        product.gallery = [];
+                    }
+                } else {
+                    product.gallery = [];
+                }
+                delete product.gallery_json;
+                
+                // LÓGICA PRINCIPAL: Verificar se usuário tem acesso
+                let hasUserAccess = false;
+                let accessPlan = null;
+                
+                // Verificar se algum dos planos do produto corresponde aos acessos do usuário
+                if (userAccess.length > 0) {
+                    const userPlanCodes = userAccess.map(a => a.plan_code);
+                    
+                    // Verificar cada plano do produto
+                    if (product.plano_1 && userPlanCodes.includes(product.plano_1)) {
+                        hasUserAccess = true;
+                        accessPlan = product.plano_1;
+                    } else if (product.plano_2 && userPlanCodes.includes(product.plano_2)) {
+                        hasUserAccess = true;
+                        accessPlan = product.plano_2;
+                    } else if (product.plano_3 && userPlanCodes.includes(product.plano_3)) {
+                        hasUserAccess = true;
+                        accessPlan = product.plano_3;
+                    }
+                }
+                
+                // Adicionar flags de acesso
+                product.userHasAccess = hasUserAccess;
+                product.accessPlan = accessPlan;
+                
+                // Se usuário tem acesso, adicionar à lista de userProducts
+                if (hasUserAccess) {
+                    userProducts.push({
+                        ...product,
+                        originalCategory: product.category, // Salvar categoria original
+                        category: 'meus_produtos' // Forçar para meus_produtos
+                    });
+                    
+                    console.log(`✅ Produto liberado: ${product.name} (Plano: ${accessPlan})`);
+                }
+                
+                return product;
+            });
+            
+            console.log(`\n📊 RESUMO:`);
+            console.log(`- Total de produtos: ${processedProducts.length}`);
+            console.log(`- Produtos liberados para o usuário: ${userProducts.length}`);
+            console.log(`- Email: ${email}`);
+            console.log('==========================================\n');
+            
+            // Retornar TODOS os produtos + lista de produtos do usuário
+            res.json({ 
+                success: true, 
+                products: processedProducts,
+                userProducts: userProducts, // Produtos que vão para "MEUS PRODUTOS"
+                totalProducts: processedProducts.length,
+                userAccessCount: userProducts.length,
+                userEmail: email,
+                activePlans: userAccess.map(a => a.plan_code),
+                timestamp: new Date().toISOString()
+            });
+        });
+    });
+});
+
+// ENDPOINT AUXILIAR - Verificar acessos detalhados
+app.post('/api/user/check-all-access', (req, res) => {
+    const { email } = req.body;
+    
+    console.log(`\n🔐 Verificando todos os acessos de: ${email}`);
+    
+    if (!email) {
+        return res.json({ 
+            success: false, 
+            error: 'Email é obrigatório',
+            accesses: [],
+            products: []
+        });
+    }
+    
+    // Buscar todos os acessos com join nos produtos
+    const query = `
+        SELECT 
+            ua.*,
+            p.id as product_id,
+            p.name as product_name,
+            p.category as product_category,
+            p.banner_url,
+            p.access_url,
+            p.buy_url
+        FROM user_access ua
+        LEFT JOIN products p ON (
+            p.plano_1 = ua.plan_code OR 
+            p.plano_2 = ua.plan_code OR 
+            p.plano_3 = ua.plan_code
+        )
+        WHERE ua.email = ? AND ua.status = 'active'
+        ORDER BY ua.created_at DESC
+    `;
+    
+    db.all(query, [email], (err, results) => {
+        if (err) {
+            console.error('❌ Erro ao buscar acessos:', err);
+            return res.status(500).json({ 
+                success: false, 
+                error: 'Erro ao buscar acessos'
+            });
+        }
+        
+        // Agrupar produtos únicos
+        const uniqueProducts = {};
+        const accesses = [];
+        
+        results.forEach(row => {
+            // Adicionar acesso à lista
+            accesses.push({
+                id: row.id,
+                plan_code: row.plan_code,
+                plan_name: row.plan_name,
+                created_at: row.created_at,
+                payment_id: row.payment_id
+            });
+            
+            // Adicionar produto se existir
+            if (row.product_id && !uniqueProducts[row.product_id]) {
+                uniqueProducts[row.product_id] = {
+                    id: row.product_id,
+                    name: row.product_name,
+                    category: row.product_category,
+                    banner_url: row.banner_url,
+                    access_url: row.access_url,
+                    buy_url: row.buy_url,
+                    plan_code: row.plan_code
+                };
+            }
+        });
+        
+        const products = Object.values(uniqueProducts);
+        
+        console.log(`📊 ${accesses.length} acessos encontrados`);
+        console.log(`📦 ${products.length} produtos liberados`);
+        
+        res.json({
+            success: true,
+            email: email,
+            accesses: accesses,
+            products: products,
+            totalAccess: accesses.length,
+            totalProducts: products.length,
+            hasAnyAccess: accesses.length > 0,
+            timestamp: new Date().toISOString()
+        });
+    });
+});
+
+// ENDPOINT DE DEBUG - Simular liberação de acesso
+app.post('/api/debug/grant-access', (req, res) => {
+    const { email, product_id } = req.body;
+    
+    if (!email || !product_id) {
+        return res.status(400).json({ 
+            success: false, 
+            error: 'Email e product_id são obrigatórios' 
+        });
+    }
+    
+    // Buscar o produto
+    db.get('SELECT * FROM products WHERE id = ?', [product_id], (err, product) => {
+        if (err || !product) {
+            return res.status(404).json({ 
+                success: false, 
+                error: 'Produto não encontrado' 
+            });
+        }
+        
+        // Usar o primeiro plano disponível
+        const plan_code = product.plano_1 || product.plano_2 || product.plano_3 || `PLAN_${product_id}`;
+        
+        // Verificar se já existe
+        db.get(
+            'SELECT * FROM user_access WHERE email = ? AND plan_code = ? AND status = "active"',
+            [email, plan_code],
+            (err, existing) => {
+                if (existing) {
+                    return res.json({ 
+                        success: true, 
+                        message: 'Acesso já existe',
+                        access_id: existing.id 
+                    });
+                }
+                
+                // Inserir novo acesso
+                const insertQuery = `
+                    INSERT INTO user_access 
+                    (email, product_code, plan_code, plan_name, sale_amount, payment_id, status)
+                    VALUES (?, ?, ?, ?, ?, ?, 'active')
+                `;
+                
+                db.run(insertQuery, [
+                    email,
+                    product.id,
+                    plan_code,
+                    product.name,
+                    0,
+                    'DEBUG_' + Date.now()
+                ], function(err) {
+                    if (err) {
+                        return res.status(500).json({ 
+                            success: false, 
+                            error: 'Erro ao liberar acesso' 
+                        });
+                    }
+                    
+                    console.log(`✅ Acesso DEBUG liberado: ${email} → ${product.name}`);
+                    res.json({ 
+                        success: true, 
+                        message: 'Acesso liberado com sucesso',
+                        access_id: this.lastID,
+                        product_name: product.name,
+                        plan_code: plan_code
+                    });
+                });
+            }
+        );
+    });
+});
 
 app.listen(PORT, () => {
     console.log(`\n🚀 ===== SERVIDOR VIP CORRIGIDO =====`);
