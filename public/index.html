@@ -1685,42 +1685,62 @@
         // =============================================================================
         async function loadProducts() {
             try {
-                console.log('📦 Carregando produtos...');
+                console.log('📦 Carregando produtos para usuário:', currentUser);
                 
-                const cacheKey = 'vip_products_data';
-                const cachedProducts = CacheManager.get(cacheKey);
-                
-                if (cachedProducts && !CacheManager.needsRefresh(cacheKey)) {
-                    console.log('📦 Usando produtos do cache');
-                    renderProducts(cachedProducts);
-                    return;
-                }
-                
-                console.log('🔄 Buscando produtos atualizados da API...');
-                const response = await fetch(`${API_BASE}/api/products?t=${Date.now()}`, {
-                    method: 'GET',
+                // CORREÇÃO: Usar o endpoint /api/user/products em vez de /api/products
+                console.log('🔄 Buscando produtos do usuário via API...');
+                const response = await fetch(`${API_BASE}/api/user/products`, {
+                    method: 'POST',
                     headers: {
+                        'Content-Type': 'application/json',
                         'Cache-Control': 'no-cache, no-store, must-revalidate',
                         'Pragma': 'no-cache',
                         'Expires': '0'
-                    }
+                    },
+                    body: JSON.stringify({
+                        email: currentUser
+                    })
                 });
                 
                 const data = await response.json();
                 
                 if (data.success) {
                     console.log(`✅ ${data.products.length} produtos carregados da API`);
+                    console.log(`🎯 ${data.userProducts.length} produtos liberados para o usuário`);
+                    console.log(`📋 Planos ativos:`, data.activePlans);
                     
-                    CacheManager.set(cacheKey, data.products, CacheManager.EXPIRATION_TIMES.PRODUCTS);
+                    // CORREÇÃO: Combinar produtos normais + produtos do usuário
+                    const allProducts = [...data.products];
                     
-                    renderProducts(data.products);
+                    // CORREÇÃO: Adicionar produtos liberados à categoria "meus_produtos"
+                    if (data.userProducts && data.userProducts.length > 0) {
+                        data.userProducts.forEach(userProduct => {
+                            // Forçar categoria para meus_produtos
+                            userProduct.category = 'meus_produtos';
+                            
+                            // Verificar se já existe na lista (evitar duplicação)
+                            const existsInAll = allProducts.find(p => p.id === userProduct.id);
+                            if (!existsInAll) {
+                                allProducts.push(userProduct);
+                            }
+                            
+                            console.log(`✅ Produto liberado adicionado: ${userProduct.name}`);
+                        });
+                    }
+                    
+                    // Cache dos produtos combinados
+                    const cacheKey = 'vip_products_data';
+                    CacheManager.set(cacheKey, allProducts, CacheManager.EXPIRATION_TIMES.PRODUCTS);
+                    
+                    renderProducts(allProducts);
                 } else {
                     console.log('⚠️ API não retornou sucesso, usando dados mock');
                     renderMockProducts();
                 }
             } catch (error) {
-                console.log('⚠️ API não disponível, tentando cache ou dados mock');
+                console.error('❌ Erro ao carregar produtos:', error);
                 
+                // Fallback para cache ou mock
                 const cacheKey = 'vip_products_data';
                 const cachedProducts = CacheManager.get(cacheKey);
                 
@@ -1975,6 +1995,36 @@
             debugCache,
             clearAllCache: () => CacheManager.clearAll(),
             loadProducts,
+            debugUserAccess: () => {
+                if (!currentUser) {
+                    console.log('❌ Nenhum usuário logado');
+                    return;
+                }
+                
+                console.log(`\n🔍 ===== DEBUG ACESSO DO USUÁRIO =====`);
+                console.log(`📧 Email: ${currentUser}`);
+                
+                // Verificar acessos na API
+                fetch(`${API_BASE}/debug/access/${currentUser}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        console.log('📊 Acessos encontrados:', data.access_records);
+                        console.log('📦 Produtos liberados:', data.access_records.length);
+                        
+                        if (data.access_records.length > 0) {
+                            console.log('📋 Planos liberados:');
+                            data.access_records.forEach(access => {
+                                console.log(`  - ${access.plan_code}: ${access.plan_name}`);
+                            });
+                        } else {
+                            console.log('❌ Nenhum acesso encontrado para este email');
+                        }
+                        console.log('==========================================\n');
+                    })
+                    .catch(error => {
+                        console.error('❌ Erro ao verificar acessos:', error);
+                    });
+            },
             testGallery: (productId) => {
                 const products = CacheManager.get('vip_products_data') || [];
                 const product = products.find(p => p.id == productId);
