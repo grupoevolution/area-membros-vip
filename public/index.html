@@ -16,7 +16,7 @@
     <link rel="manifest" href="/manifest.json">
     <link rel="icon" href="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIiBmaWxsPSIjRTUwOTE0Ii8+Cjx0ZXh0IHg9IjE2IiB5PSIyMCIgZmlsbD0id2hpdGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZvbnQtc2l6ZT0iMTAiIGZvbnQtd2VpZ2h0PSJib2xkIj5WSVA8L3RleHQ+Cjwvc3ZnPg==">
     
-    <!-- FORCE NO CACHE FOR THIS PAGE -->
+    <!-- FORCE NO CACHE -->
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
@@ -288,8 +288,7 @@
             cursor: not-allowed;
             transform: none;
         }
-
-        /* VIP Modal */
+/* VIP Modal */
         .vip-modal {
             position: fixed;
             top: 0;
@@ -523,7 +522,6 @@
             background-color: #000000;
         }
 
-        /* Content Wrapper */
         .content-wrapper {
             padding: 2rem 4%;
             background-color: #000000;
@@ -631,7 +629,7 @@
             height: 16px;
         }
 
-        /* Product Modal */
+        /* Product Modal - CORRIGIDO */
         .overlay {
             position: fixed;
             top: 0;
@@ -753,7 +751,7 @@
             box-shadow: 0 8px 25px rgba(229, 9, 20, 0.4);
         }
         
-        /* Gallery */
+        /* Gallery - CORRIGIDO */
         .media-gallery {
             border-top: 1px solid #333;
             padding-top: 1.5rem;
@@ -769,7 +767,7 @@
         
         .gallery-container {
             height: 350px;
-            overflow-y: scroll;
+            overflow-y: auto;
             padding-right: 10px;
         }
         
@@ -804,10 +802,11 @@
             transition: all 0.3s ease;
             background: #222;
             cursor: pointer;
+            min-height: 200px;
         }
         
         .gallery-item:hover {
-            transform: scale(1.01);
+            transform: scale(1.02);
             box-shadow: 0 4px 15px rgba(229, 9, 20, 0.3);
         }
         
@@ -815,6 +814,8 @@
         .gallery-item video {
             width: 100%;
             height: auto;
+            min-height: 200px;
+            object-fit: cover;
             display: block;
             border-radius: 8px;
         }
@@ -898,7 +899,7 @@
             letter-spacing: 0.5px;
         }
 
-        /* Loading */
+        /* Loading & Empty State */
         .loading {
             text-align: center;
             padding: 40px;
@@ -906,7 +907,6 @@
             font-size: 1rem;
         }
 
-        /* Empty State */
         .empty-state {
             text-align: center;
             padding: 3rem 2rem;
@@ -1095,7 +1095,7 @@
                 </section>
             </div>
             
-            <!-- Modal de detalhes do produto -->
+            <!-- Modal de detalhes do produto - ESTRUTURA CORRIGIDA -->
             <div class="overlay" id="productModal">
                 <div class="modal" id="modalContent">
                     <div class="modal-header">
@@ -1118,6 +1118,7 @@
                             </button>
                         </div>
                         
+                        <!-- Galeria corrigida com estrutura melhorada -->
                         <div class="media-gallery">
                             <h4 class="gallery-title">Prévia do Conteúdo</h4>
                             <div class="gallery-container">
@@ -1163,23 +1164,18 @@
             </button>
         </nav>
     </div>
-
-    <script>
+<script>
         // =============================================================================
-        // SISTEMA DE CACHE INTELIGENTE - VERSÃO OTIMIZADA
+        // CACHE MANAGER - OTIMIZADO
         // =============================================================================
-        
-        // Controle de cache com expiração
         const CacheManager = {
-            // Configurações de expiração
             EXPIRATION_TIMES: {
-                LOGIN: 7 * 24 * 60 * 60 * 1000,  // 7 dias
-                PWA_POPUP: 24 * 60 * 60 * 1000,  // 1 dia
-                PRODUCTS: 5 * 60 * 1000,          // 5 minutos (dados dinâmicos)
-                USER_ACCESS: 30 * 60 * 1000       // 30 minutos
+                LOGIN: 7 * 24 * 60 * 60 * 1000,
+                PWA_POPUP: 24 * 60 * 60 * 1000,
+                PRODUCTS: 5 * 60 * 1000,
+                USER_ACCESS: 30 * 60 * 1000
             },
 
-            // Salvar com timestamp
             set(key, value, expiration = null) {
                 const item = {
                     value: value,
@@ -1187,10 +1183,9 @@
                     expiration: expiration || this.EXPIRATION_TIMES[key.toUpperCase()] || 24 * 60 * 60 * 1000
                 };
                 localStorage.setItem(key, JSON.stringify(item));
-                console.log(`💾 Cache salvado: ${key} (expira em ${Math.round(item.expiration / 1000 / 60)} min)`);
+                console.log(`💾 Cache salvado: ${key}`);
             },
 
-            // Buscar verificando expiração
             get(key) {
                 try {
                     const itemStr = localStorage.getItem(key);
@@ -1199,7 +1194,6 @@
                     const item = JSON.parse(itemStr);
                     const now = Date.now();
                     
-                    // Verificar se expirou
                     if (now - item.timestamp > item.expiration) {
                         console.log(`🗑️ Cache expirado removido: ${key}`);
                         localStorage.removeItem(key);
@@ -1215,13 +1209,11 @@
                 }
             },
 
-            // Limpar cache específico
             remove(key) {
                 localStorage.removeItem(key);
                 console.log(`🗑️ Cache removido: ${key}`);
             },
 
-            // Limpar todo o cache
             clearAll() {
                 const keys = Object.keys(localStorage);
                 keys.forEach(key => {
@@ -1232,7 +1224,6 @@
                 console.log('🧹 Todo cache limpo');
             },
 
-            // Verificar se dados precisam ser atualizados
             needsRefresh(key) {
                 const itemStr = localStorage.getItem(key);
                 if (!itemStr) return true;
@@ -1240,7 +1231,7 @@
                 try {
                     const item = JSON.parse(itemStr);
                     const age = Date.now() - item.timestamp;
-                    const threshold = item.expiration * 0.8; // 80% do tempo de vida
+                    const threshold = item.expiration * 0.8;
                     
                     return age > threshold;
                 } catch {
@@ -1250,26 +1241,22 @@
         };
 
         // =============================================================================
-        // GLOBAL VARIABLES - VERSÃO OTIMIZADA
+        // GLOBAL VARIABLES
         // =============================================================================
         let currentUser = CacheManager.get('vip_current_user');
         let isLoggedIn = CacheManager.get('vip_is_logged_in') === true;
         let deferredPrompt;
 
-        // API Base URL
         const API_BASE = window.location.hostname === 'localhost' ? 'http://localhost:3000' : '';
 
         // =============================================================================
-        // PWA FUNCTIONALITY - VERSÃO CONTROLADA
+        // PWA FUNCTIONALITY
         // =============================================================================
-        
-        // Service Worker com cache minimalista
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/sw.js')
                 .then(reg => {
                     console.log('✅ Service Worker registrado');
                     
-                    // Verificar atualizações periodicamente
                     reg.addEventListener('updatefound', () => {
                         console.log('🔄 Nova versão disponível, atualizando...');
                         window.location.reload();
@@ -1302,7 +1289,6 @@
             const popup = document.getElementById('pwaInstallPopup');
             popup.style.display = 'flex';
             
-            // Marcar como mostrado
             CacheManager.set('vip_pwa_last_shown', Date.now(), CacheManager.EXPIRATION_TIMES.PWA_POPUP);
         }
 
@@ -1331,13 +1317,11 @@
         }
 
         // =============================================================================
-        // LOGIN FUNCTIONALITY - COM EXPIRAÇÃO DE 7 DIAS
+        // LOGIN FUNCTIONALITY
         // =============================================================================
-        
         document.addEventListener('DOMContentLoaded', function() {
             console.log('🚀 App iniciado');
             
-            // Limpar cache antigo (versão de migração)
             const oldKeys = ['currentUser', 'isLoggedIn', 'hasShownPwaPopup', 'lastPwaPopupDate'];
             oldKeys.forEach(key => {
                 if (localStorage.getItem(key)) {
@@ -1367,7 +1351,6 @@
                 
                 setTimeout(() => {
                     if (stayConnected) {
-                        // Salvar com expiração de 7 dias
                         CacheManager.set('vip_current_user', email, CacheManager.EXPIRATION_TIMES.LOGIN);
                         CacheManager.set('vip_is_logged_in', true, CacheManager.EXPIRATION_TIMES.LOGIN);
                         console.log('💾 Login salvo por 7 dias');
@@ -1385,7 +1368,6 @@
         });
 
         function autoLogin() {
-            // Verificar se o login ainda é válido
             if (!CacheManager.get('vip_current_user') || !CacheManager.get('vip_is_logged_in')) {
                 console.log('🔒 Login expirado, redirecionando');
                 handleLogout();
@@ -1400,10 +1382,8 @@
             document.getElementById('mainApp').classList.add('active');
             document.getElementById('userEmail').textContent = currentUser;
             
-            // Carregar produtos sempre fresh
             loadProducts();
             
-            // Mostrar PWA popup se necessário (após 3 segundos)
             setTimeout(() => {
                 if (shouldShowPwaPopup() && deferredPrompt) {
                     showPwaPopup();
@@ -1414,10 +1394,8 @@
         function handleLogout() {
             if (!confirm('Deseja realmente sair?')) return;
             
-            // Limpar todo o cache do usuário
             CacheManager.clearAll();
             
-            // Reset variables
             currentUser = null;
             isLoggedIn = false;
             
@@ -1440,10 +1418,12 @@
         }
 
         // =============================================================================
-        // PRODUCT MODAL FUNCTIONALITY
+        // PRODUCT MODAL FUNCTIONALITY - CORRIGIDO
         // =============================================================================
         async function openModal(product) {
             console.log('🔍 Abrindo modal para produto:', product.name);
+            console.log('📦 Dados do produto:', product);
+            console.log('🖼️ Galeria do produto:', product.gallery);
             
             const modal = document.getElementById('modalContent');
             const overlay = document.getElementById('productModal');
@@ -1490,14 +1470,12 @@
                     };
                 }
             } else {
-                // Para outras categorias, verificar acesso
                 console.log('🔒 Produto em outra categoria - verificar acesso');
                 
                 const planos = [product.plano_1, product.plano_2, product.plano_3].filter(p => p);
                 let hasAccess = planos.length === 0;
                 
                 if (planos.length > 0 && currentUser) {
-                    // Verificar cache de acesso primeiro
                     const cacheKey = `vip_access_${currentUser}_${planos.join('_')}`;
                     let cachedAccess = CacheManager.get(cacheKey);
                     
@@ -1505,7 +1483,6 @@
                         hasAccess = cachedAccess;
                         console.log(`📦 Acesso do cache: ${hasAccess ? 'LIBERADO' : 'NEGADO'}`);
                     } else {
-                        // Verificar acesso via API
                         for (const plano of planos) {
                             try {
                                 const response = await fetch(`${API_BASE}/api/check-access`, {
@@ -1532,12 +1509,10 @@
                             }
                         }
                         
-                        // Salvar resultado no cache por 30 minutos
                         CacheManager.set(cacheKey, hasAccess, CacheManager.EXPIRATION_TIMES.USER_ACCESS);
                     }
                 }
                 
-                // Configurar botão baseado no acesso
                 if (hasAccess) {
                     if (product.access_url) {
                         modalButton.innerHTML = `
@@ -1589,7 +1564,7 @@
                 }
             }
             
-            // Render gallery
+            // CORREÇÃO PRINCIPAL: Renderizar galeria
             renderGallery(product.gallery || []);
             
             overlay.style.display = 'flex';
@@ -1598,27 +1573,64 @@
             }, 50);
         }
 
+        // =============================================================================
+        // FUNÇÃO RENDER GALLERY - TOTALMENTE CORRIGIDA
+        // =============================================================================
         function renderGallery(gallery) {
             const galleryContainer = document.getElementById('mediaGallery');
+            
+            // Debug detalhado
+            console.log('🖼️ =====  RENDERIZANDO GALERIA =====');
+            console.log('📊 Gallery recebida:', gallery);
+            console.log('📊 Tipo:', typeof gallery);
+            console.log('📊 É array?', Array.isArray(gallery));
+            console.log('📊 Tamanho:', gallery ? gallery.length : 'N/A');
+            
+            // Limpar galeria anterior
             galleryContainer.innerHTML = '';
             
-            if (gallery.length === 0) {
-                galleryContainer.innerHTML = '<div class="empty-state">Nenhuma prévia disponível</div>';
+            // Verificar se gallery existe e tem dados válidos
+            if (!gallery || !Array.isArray(gallery) || gallery.length === 0) {
+                console.log('⚠️ Galeria vazia ou inválida');
+                galleryContainer.innerHTML = `
+                    <div class="empty-state">
+                        <svg viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                        </svg>
+                        <p>Nenhuma prévia disponível</p>
+                    </div>
+                `;
                 return;
             }
             
-            gallery.forEach((item) => {
+            console.log('✅ Processando galeria com', gallery.length, 'itens');
+            
+            // Processar cada item da galeria
+            gallery.forEach((item, index) => {
+                console.log(`🖼️ Processando item ${index + 1}:`, item);
+                
+                // Verificar se item tem dados válidos
+                if (!item || !item.url) {
+                    console.warn(`⚠️ Item ${index + 1} inválido:`, item);
+                    return;
+                }
+                
                 const galleryItem = document.createElement('div');
                 galleryItem.className = 'gallery-item';
+                
+                // Adicionar evento de clique
                 galleryItem.onclick = () => {
+                    console.log('🎬 Clicando em item da galeria:', item);
                     if (item.type === 'video') {
                         changeMainVideo(item.url);
                     }
                 };
                 
+                // Renderizar baseado no tipo
                 if (item.type === 'video') {
+                    console.log(`🎬 Renderizando vídeo: ${item.url}`);
                     galleryItem.innerHTML = `
-                        <video>
+                        <video preload="metadata">
                             <source src="${item.url}" type="video/mp4">
                         </video>
                         <div class="gallery-play-overlay">
@@ -1630,14 +1642,26 @@
                         </div>
                     `;
                 } else {
-                    galleryItem.innerHTML = `<img src="${item.url}" alt="Prévia do conteúdo" loading="lazy">`;
+                    console.log(`🖼️ Renderizando imagem: ${item.url}`);
+                    galleryItem.innerHTML = `
+                        <img src="${item.url}" 
+                             alt="Prévia do conteúdo" 
+                             loading="lazy" 
+                             onerror="console.warn('Erro ao carregar imagem:', this.src); this.style.display='none';">
+                    `;
                 }
                 
+                // Adicionar à galeria
                 galleryContainer.appendChild(galleryItem);
+                console.log(`✅ Item ${index + 1} adicionado à galeria`);
             });
+            
+            console.log(`✅ Galeria renderizada com sucesso! ${gallery.length} itens processados`);
+            console.log('=========================================');
         }
 
         function changeMainVideo(videoUrl) {
+            console.log('🎬 Mudando vídeo principal para:', videoUrl);
             const video = document.getElementById('modalVideo');
             video.src = videoUrl;
             video.load();
@@ -1656,26 +1680,22 @@
                 overlay.style.display = 'none';
             }, 400);
         }
-
-        // =============================================================================
-        // PRODUCTS FUNCTIONALITY - CACHE INTELIGENTE
+// =============================================================================
+        // PRODUCTS FUNCTIONALITY - TOTALMENTE CORRIGIDO
         // =============================================================================
         async function loadProducts() {
             try {
                 console.log('📦 Carregando produtos...');
                 
-                // Verificar se precisa atualizar dados
                 const cacheKey = 'vip_products_data';
                 const cachedProducts = CacheManager.get(cacheKey);
                 
-                // Se tem cache e não precisa de refresh, usar cache
                 if (cachedProducts && !CacheManager.needsRefresh(cacheKey)) {
                     console.log('📦 Usando produtos do cache');
                     renderProducts(cachedProducts);
                     return;
                 }
                 
-                // Buscar dados frescos da API
                 console.log('🔄 Buscando produtos atualizados da API...');
                 const response = await fetch(`${API_BASE}/api/products?t=${Date.now()}`, {
                     method: 'GET',
@@ -1691,7 +1711,6 @@
                 if (data.success) {
                     console.log(`✅ ${data.products.length} produtos carregados da API`);
                     
-                    // Salvar no cache por 5 minutos
                     CacheManager.set(cacheKey, data.products, CacheManager.EXPIRATION_TIMES.PRODUCTS);
                     
                     renderProducts(data.products);
@@ -1702,7 +1721,6 @@
             } catch (error) {
                 console.log('⚠️ API não disponível, tentando cache ou dados mock');
                 
-                // Tentar usar cache mesmo que seja antigo
                 const cacheKey = 'vip_products_data';
                 const cachedProducts = CacheManager.get(cacheKey);
                 
@@ -1728,9 +1746,9 @@
                     category: "meus_produtos",
                     plano_1: "PPLQQLST6",
                     gallery: [
-                        { type: "image", url: "https://e-volutionn.com/wp-content/uploads/2025/07/IMG_7978.jpg" },
-                        { type: "image", url: "https://e-volutionn.com/wp-content/uploads/2025/07/IMG_7975.jpg" },
-                        { type: "video", url: "https://e-volutionn.com/wp-content/uploads/2025/05/AMOSTRA-01.mp4" }
+                        { type: "image", url: "https://e-volutionn.com/wp-content/uploads/2025/07/IMG_7978.jpg", order_index: 0 },
+                        { type: "image", url: "https://e-volutionn.com/wp-content/uploads/2025/07/IMG_7975.jpg", order_index: 1 },
+                        { type: "video", url: "https://e-volutionn.com/wp-content/uploads/2025/05/AMOSTRA-01.mp4", order_index: 2 }
                     ]
                 },
                 {
@@ -1744,8 +1762,8 @@
                     category: "mais_vendidos",
                     plano_1: "PPLQQLST7",
                     gallery: [
-                        { type: "video", url: "https://www.w3schools.com/html/mov_bbb.mp4" },
-                        { type: "image", url: "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=400&h=600&fit=crop" }
+                        { type: "video", url: "https://www.w3schools.com/html/mov_bbb.mp4", order_index: 0 },
+                        { type: "image", url: "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=400&h=600&fit=crop", order_index: 1 }
                     ]
                 },
                 {
@@ -1756,19 +1774,23 @@
                     access_url: "https://example.com/free-content",
                     category: "meus_produtos",
                     gallery: [
-                        { type: "image", url: "https://images.unsplash.com/photo-1494790108755-2616c78d9f14?w=400&h=300&fit=crop" }
+                        { type: "image", url: "https://images.unsplash.com/photo-1494790108755-2616c78d9f14?w=400&h=300&fit=crop", order_index: 0 }
                     ]
                 }
             ];
             
-            // Salvar mock no cache temporariamente
             const cacheKey = 'vip_products_data';
-            CacheManager.set(cacheKey, mockProducts, 60000); // 1 minuto apenas
+            CacheManager.set(cacheKey, mockProducts, 60000);
             
             renderProducts(mockProducts);
         }
 
+        // =============================================================================
+        // RENDER PRODUCTS - CORRIGIDO COM GALERIA
+        // =============================================================================
         function renderProducts(products) {
+            console.log('🎨 Renderizando produtos:', products.length);
+            
             const categories = {
                 'meus_produtos': document.getElementById('meusProdutos'),
                 'mais_vendidos': document.getElementById('maisVendidos'),
@@ -1798,6 +1820,27 @@
                 const container = categories[category];
                 if (container) {
                     categoryProducts.forEach(product => {
+                        // CORREÇÃO: Garantir que gallery está sempre presente e correta
+                        if (!product.gallery) {
+                            product.gallery = [];
+                        }
+                        
+                        // CORREÇÃO: Se gallery_json existe mas gallery não, fazer parse
+                        if (product.gallery_json && product.gallery.length === 0) {
+                            try {
+                                console.log('🔧 Fazendo parse de gallery_json para:', product.name);
+                                const galleryItems = product.gallery_json.split(',').map(item => JSON.parse(item));
+                                product.gallery = galleryItems.sort((a, b) => a.order_index - b.order_index);
+                                console.log('✅ Gallery parseada:', product.gallery);
+                            } catch (e) {
+                                console.error('❌ Erro ao fazer parse da galeria:', e);
+                                product.gallery = [];
+                            }
+                        }
+                        
+                        // CORREÇÃO: Log para debug
+                        console.log(`🖼️ Produto ${product.name} - Gallery:`, product.gallery);
+                        
                         container.appendChild(createProductCard(product));
                     });
                 }
@@ -1824,10 +1867,13 @@
             const card = document.createElement('div');
             card.className = 'module-card';
             card.onclick = () => {
+                console.log('🎯 Clicando no produto:', product.name);
+                console.log('🖼️ Gallery que será passada:', product.gallery);
+                
                 // Primeiro abrir o modal
                 openModal(product);
                 
-                // Depois verificar se deve mostrar popup PWA (só na primeira interação do dia)
+                // Depois verificar se deve mostrar popup PWA
                 setTimeout(() => {
                     if (shouldShowPwaPopup() && deferredPrompt) {
                         showPwaPopup();
@@ -1897,15 +1943,11 @@
         // =============================================================================
         // UTILITY FUNCTIONS
         // =============================================================================
-        
-        // Função para forçar atualização de dados
         function forceRefresh() {
             console.log('🔄 Forçando atualização...');
             
-            // Limpar cache de produtos
             CacheManager.remove('vip_products_data');
             
-            // Limpar cache de acesso
             const keys = Object.keys(localStorage);
             keys.forEach(key => {
                 if (key.startsWith('vip_access_')) {
@@ -1913,11 +1955,9 @@
                 }
             });
             
-            // Recarregar produtos
             loadProducts();
         }
 
-        // Função para debug do cache
         function debugCache() {
             console.log('🐛 DEBUG DO CACHE:');
             const keys = Object.keys(localStorage);
@@ -1934,7 +1974,17 @@
             forceRefresh,
             debugCache,
             clearAllCache: () => CacheManager.clearAll(),
-            loadProducts
+            loadProducts,
+            testGallery: (productId) => {
+                const products = CacheManager.get('vip_products_data') || [];
+                const product = products.find(p => p.id == productId);
+                if (product) {
+                    console.log('🧪 Testando galeria do produto:', product);
+                    renderGallery(product.gallery || []);
+                } else {
+                    console.log('❌ Produto não encontrado');
+                }
+            }
         };
 
         // =============================================================================
@@ -1976,12 +2026,11 @@
             }
         });
 
-        // Detectar quando a aba fica ativa novamente (para refresh inteligente)
+        // Detectar quando a aba fica ativa novamente
         document.addEventListener('visibilitychange', () => {
             if (!document.hidden && isLoggedIn) {
                 console.log('👁️ App voltou ao foco');
                 
-                // Se faz mais de 2 minutos que carregou os produtos, recarregar
                 const cacheKey = 'vip_products_data';
                 if (CacheManager.needsRefresh(cacheKey)) {
                     console.log('🔄 Atualizando produtos por estar desatualizado');
@@ -2001,8 +2050,9 @@
             }
         }, 5 * 60 * 1000); // 5 minutos
 
-        console.log('🚀 App VIP Otimizado carregado com sucesso!');
+        console.log('🚀 App VIP TOTALMENTE CORRIGIDO carregado com sucesso!');
         console.log('🐛 Para debug use: VIP_DEBUG.debugCache() ou VIP_DEBUG.forceRefresh()');
+        console.log('🧪 Para testar galeria use: VIP_DEBUG.testGallery(1)');
     </script>
 </body>
 </html>
