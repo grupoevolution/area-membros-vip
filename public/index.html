@@ -1574,113 +1574,6 @@
         }
 
         // =============================================================================
-        // FUNÇÃO RENDER GALLERY - TOTALMENTE CORRIGIDA
-        // =============================================================================
-        function renderGallery(gallery) {
-            const galleryContainer = document.getElementById('mediaGallery');
-            
-            // Debug detalhado
-            console.log('🖼️ =====  RENDERIZANDO GALERIA =====');
-            console.log('📊 Gallery recebida:', gallery);
-            console.log('📊 Tipo:', typeof gallery);
-            console.log('📊 É array?', Array.isArray(gallery));
-            console.log('📊 Tamanho:', gallery ? gallery.length : 'N/A');
-            
-            // Limpar galeria anterior
-            galleryContainer.innerHTML = '';
-            
-            // Verificar se gallery existe e tem dados válidos
-            if (!gallery || !Array.isArray(gallery) || gallery.length === 0) {
-                console.log('⚠️ Galeria vazia ou inválida');
-                galleryContainer.innerHTML = `
-                    <div class="empty-state">
-                        <svg viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-                        </svg>
-                        <p>Nenhuma prévia disponível</p>
-                    </div>
-                `;
-                return;
-            }
-            
-            console.log('✅ Processando galeria com', gallery.length, 'itens');
-            
-            // Processar cada item da galeria
-            gallery.forEach((item, index) => {
-                console.log(`🖼️ Processando item ${index + 1}:`, item);
-                
-                // Verificar se item tem dados válidos
-                if (!item || !item.url) {
-                    console.warn(`⚠️ Item ${index + 1} inválido:`, item);
-                    return;
-                }
-                
-                const galleryItem = document.createElement('div');
-                galleryItem.className = 'gallery-item';
-                
-                // Adicionar evento de clique
-                galleryItem.onclick = () => {
-                    console.log('🎬 Clicando em item da galeria:', item);
-                    if (item.type === 'video') {
-                        changeMainVideo(item.url);
-                    }
-                };
-                
-                // Renderizar baseado no tipo
-                if (item.type === 'video') {
-                    console.log(`🎬 Renderizando vídeo: ${item.url}`);
-                    galleryItem.innerHTML = `
-                        <video preload="metadata">
-                            <source src="${item.url}" type="video/mp4">
-                        </video>
-                        <div class="gallery-play-overlay">
-                            <div class="gallery-play-button">
-                                <svg class="gallery-play-icon" viewBox="0 0 24 24">
-                                    <polygon points="5,3 19,12 5,21"/>
-                                </svg>
-                            </div>
-                        </div>
-                    `;
-                } else {
-                    console.log(`🖼️ Renderizando imagem: ${item.url}`);
-                    galleryItem.innerHTML = `
-                        <img src="${item.url}" 
-                             alt="Prévia do conteúdo" 
-                             loading="lazy" 
-                             onerror="console.warn('Erro ao carregar imagem:', this.src); this.style.display='none';">
-                    `;
-                }
-                
-                // Adicionar à galeria
-                galleryContainer.appendChild(galleryItem);
-                console.log(`✅ Item ${index + 1} adicionado à galeria`);
-            });
-            
-            console.log(`✅ Galeria renderizada com sucesso! ${gallery.length} itens processados`);
-            console.log('=========================================');
-        }
-
-        function changeMainVideo(videoUrl) {
-            console.log('🎬 Mudando vídeo principal para:', videoUrl);
-            const video = document.getElementById('modalVideo');
-            video.src = videoUrl;
-            video.load();
-            video.style.display = 'block';
-        }
-
-        function closeModal() {
-            const modal = document.getElementById('modalContent');
-            const overlay = document.getElementById('productModal');
-            const video = document.getElementById('modalVideo');
-            
-            modal.classList.remove('active');
-            video.pause();
-            
-            setTimeout(() => {
-                overlay.style.display = 'none';
-            }, 400);
-        }
-// =============================================================================
         // PRODUCTS FUNCTIONALITY - TOTALMENTE CORRIGIDO
         // =============================================================================
         async function loadProducts() {
@@ -1806,7 +1699,7 @@
         }
 
         // =============================================================================
-        // RENDER PRODUCTS - CORRIGIDO COM GALERIA
+        // RENDER PRODUCTS - CORRIGIDO COM LÓGICA DE CATEGORIAS
         // =============================================================================
         function renderProducts(products) {
             console.log('🎨 Renderizando produtos:', products.length);
@@ -1825,14 +1718,72 @@
                 if (container) container.innerHTML = '';
             });
 
-            // Group products by category
+            // CORREÇÃO PRINCIPAL: Separar produtos liberados dos produtos normais
             const productsByCategory = {};
+            const liberatedProductIds = []; // IDs dos produtos liberados
+            
             products.forEach(product => {
-                const category = product.category || 'meus_produtos';
-                if (!productsByCategory[category]) {
-                    productsByCategory[category] = [];
+                // CORREÇÃO: Garantir que gallery está sempre presente e correta
+                if (!product.gallery) {
+                    product.gallery = [];
                 }
-                productsByCategory[category].push(product);
+                
+                // CORREÇÃO: Se gallery_json existe mas gallery não, fazer parse
+                if (product.gallery_json && product.gallery.length === 0) {
+                    try {
+                        console.log('🔧 Fazendo parse de gallery_json para:', product.name);
+                        const galleryItems = product.gallery_json.split(',').map(item => JSON.parse(item));
+                        product.gallery = galleryItems.sort((a, b) => a.order_index - b.order_index);
+                        console.log('✅ Gallery parseada:', product.gallery);
+                    } catch (e) {
+                        console.error('❌ Erro ao fazer parse da galeria:', e);
+                        product.gallery = [];
+                    }
+                }
+                
+                console.log(`🖼️ Produto ${product.name} - Gallery:`, product.gallery);
+                
+                // NOVA LÓGICA: Verificar se produto está liberado (categoria meus_produtos)
+                if (product.category === 'meus_produtos') {
+                    // Produto liberado - vai para MEUS PRODUTOS
+                    if (!productsByCategory['meus_produtos']) {
+                        productsByCategory['meus_produtos'] = [];
+                    }
+                    productsByCategory['meus_produtos'].push(product);
+                    liberatedProductIds.push(product.id); // Marcar como liberado
+                    
+                    console.log(`🔓 Produto LIBERADO: ${product.name} → MEUS PRODUTOS`);
+                } else {
+                    // Produto não liberado - verificar se tem originalCategory
+                    const category = product.originalCategory || product.category || 'mais_vendidos';
+                    
+                    // Só adicionar se NÃO estiver liberado
+                    if (!liberatedProductIds.includes(product.id)) {
+                        if (!productsByCategory[category]) {
+                            productsByCategory[category] = [];
+                        }
+                        productsByCategory[category].push(product);
+                        
+                        console.log(`🔒 Produto BLOQUEADO: ${product.name} → ${category.toUpperCase()}`);
+                    } else {
+                        console.log(`⚠️ Produto ${product.name} já liberado, não adicionando à categoria original`);
+                    }
+                }
+            });
+
+            // NOVA VERIFICAÇÃO: Remover produtos duplicados
+            Object.keys(productsByCategory).forEach(category => {
+                if (category !== 'meus_produtos') {
+                    productsByCategory[category] = productsByCategory[category].filter(product => 
+                        !liberatedProductIds.includes(product.id)
+                    );
+                }
+            });
+
+            console.log('\n📊 DISTRIBUIÇÃO FINAL POR CATEGORIA:');
+            Object.entries(productsByCategory).forEach(([category, products]) => {
+                console.log(`${category}: ${products.length} produtos`);
+                products.forEach(p => console.log(`  - ${p.name}`));
             });
 
             // Render products in their categories
@@ -1840,27 +1791,6 @@
                 const container = categories[category];
                 if (container) {
                     categoryProducts.forEach(product => {
-                        // CORREÇÃO: Garantir que gallery está sempre presente e correta
-                        if (!product.gallery) {
-                            product.gallery = [];
-                        }
-                        
-                        // CORREÇÃO: Se gallery_json existe mas gallery não, fazer parse
-                        if (product.gallery_json && product.gallery.length === 0) {
-                            try {
-                                console.log('🔧 Fazendo parse de gallery_json para:', product.name);
-                                const galleryItems = product.gallery_json.split(',').map(item => JSON.parse(item));
-                                product.gallery = galleryItems.sort((a, b) => a.order_index - b.order_index);
-                                console.log('✅ Gallery parseada:', product.gallery);
-                            } catch (e) {
-                                console.error('❌ Erro ao fazer parse da galeria:', e);
-                                product.gallery = [];
-                            }
-                        }
-                        
-                        // CORREÇÃO: Log para debug
-                        console.log(`🖼️ Produto ${product.name} - Gallery:`, product.gallery);
-                        
                         container.appendChild(createProductCard(product));
                     });
                 }
@@ -1880,7 +1810,7 @@
                 }
             });
             
-            console.log('✅ Produtos renderizados com sucesso');
+            console.log('✅ Produtos renderizados com sucesso - SEM DUPLICAÇÃO');
         }
 
         function createProductCard(product) {
