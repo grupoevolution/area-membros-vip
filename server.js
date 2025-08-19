@@ -553,6 +553,151 @@ app.delete('/api/products/:id', (req, res) => {
 });
 
 // =============================================================================
+// ENDPOINT PRINCIPAL - Buscar produtos que o usuário tem acesso
+// =============================================================================
+
+app.post('/api/user/products', (req, res) => {
+    const { email } = req.body;
+    
+    console.log(`\n🔍 ===== BUSCANDO PRODUTOS DO USUÁRIO =====`);
+    console.log(`📧 Email: ${email}`);
+    console.log(`⏰ Hora: ${new Date().toLocaleTimeString()}`);
+    
+    if (!email) {
+        console.log('❌ Email não fornecido');
+        return res.json({ 
+            success: true, 
+            products: [],
+            userProducts: [],
+            message: 'Email é obrigatório'
+        });
+    }
+    
+    // Primeiro, buscar TODOS os acessos ativos do usuário
+    const accessQuery = `
+        SELECT DISTINCT plan_code, plan_name, created_at 
+        FROM user_access 
+        WHERE email = ? AND status = 'active'
+        ORDER BY created_at DESC
+    `;
+    
+    db.all(accessQuery, [email], (err, userAccess) => {
+        if (err) {
+            console.error('❌ Erro ao buscar acessos:', err);
+            return res.status(500).json({ 
+                success: false, 
+                error: 'Erro ao buscar acessos'
+            });
+        }
+        
+        console.log(`📊 Acessos encontrados: ${userAccess.length}`);
+        if (userAccess.length > 0) {
+            console.log('📋 Planos liberados:', userAccess.map(a => a.plan_code).join(', '));
+        }
+        
+        // Buscar TODOS os produtos para exibir
+        const allProductsQuery = `
+            SELECT p.*, 
+                   GROUP_CONCAT(
+                       json_object('type', pm.type, 'url', pm.url, 'order_index', pm.order_index)
+                       ORDER BY pm.order_index
+                   ) as gallery_json
+            FROM products p 
+            LEFT JOIN product_media pm ON p.id = pm.product_id 
+            GROUP BY p.id 
+            ORDER BY p.updated_at DESC, p.created_at DESC
+        `;
+        
+        db.all(allProductsQuery, [], (err, allProducts) => {
+            if (err) {
+                console.error('❌ Erro ao buscar produtos:', err);
+                return res.status(500).json({ 
+                    success: false, 
+                    error: 'Erro ao buscar produtos'
+                });
+            }
+            
+            // Array para armazenar produtos que vão para "MEUS PRODUTOS"
+            const userProducts = [];
+            
+            // Processar cada produto
+            const processedProducts = allProducts.map(row => {
+                const product = { ...row };
+                
+                // Parse gallery JSON
+                if (product.gallery_json) {
+                    try {
+                        const galleryItems = product.gallery_json.split(',').map(item => JSON.parse(item));
+                        product.gallery = galleryItems.sort((a, b) => a.order_index - b.order_index);
+                    } catch (e) {
+                        product.gallery = [];
+                    }
+                } else {
+                    product.gallery = [];
+                }
+                delete product.gallery_json;
+                
+                // LÓGICA PRINCIPAL: Verificar se usuário tem acesso
+                let hasUserAccess = false;
+                let accessPlan = null;
+                
+                // Verificar se algum dos planos do produto corresponde aos acessos do usuário
+                if (userAccess.length > 0) {
+                    const userPlanCodes = userAccess.map(a => a.plan_code);
+                    
+                    // Verificar cada plano do produto
+                    if (product.plano_1 && userPlanCodes.includes(product.plano_1)) {
+                        hasUserAccess = true;
+                        accessPlan = product.plano_1;
+                    } else if (product.plano_2 && userPlanCodes.includes(product.plano_2)) {
+                        hasUserAccess = true;
+                        accessPlan = product.plano_2;
+                    } else if (product.plano_3 && userPlanCodes.includes(product.plano_3)) {
+                        hasUserAccess = true;
+                        accessPlan = product.plano_3;
+                    }
+                }
+                
+                // Adicionar flags de acesso
+                product.userHasAccess = hasUserAccess;
+                product.accessPlan = accessPlan;
+                
+                // Se usuário tem acesso, adicionar à lista de userProducts
+                if (hasUserAccess) {
+                    userProducts.push({
+                        ...product,
+                        originalCategory: product.category, // Salvar categoria original
+                        category: 'meus_produtos' // Forçar para meus_produtos
+                    });
+                    
+                    console.log(`✅ Produto liberado: ${product.name} (Plano: ${accessPlan})`);
+                }
+                
+                return product;
+            });
+            
+            console.log(`\n📊 RESUMO:`);
+            console.log(`- Total de produtos: ${processedProducts.length}`);
+            console.log(`- Produtos liberados para o usuário: ${userProducts.length}`);
+            console.log(`- Email: ${email}`);
+            console.log('==========================================\n');
+            
+            // Retornar TODOS os produtos + lista de produtos do usuário
+            res.json({ 
+                success: true, 
+                products: processedProducts,
+                userProducts: userProducts, // Produtos que vão para "MEUS PRODUTOS"
+                totalProducts: processedProducts.length,
+                userAccessCount: userProducts.length,
+                userEmail: email,
+                activePlans: userAccess.map(a => a.plan_code),
+                timestamp: new Date().toISOString()
+            });
+        });
+    });
+});
+
+// =============================================================================
 // PERFECTPAY WEBHOOK & ACCESS CONTROL
 // =============================================================================
 
