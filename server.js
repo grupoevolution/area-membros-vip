@@ -320,15 +320,6 @@ app.get('/api/products', (req, res) => {
             return product;
         });
         
-        console.log(`📦 Retornando ${products.length} produtos com galerias`);
-        res.json({ 
-            success: true, 
-            products,
-            timestamp: new Date().toISOString(),
-            cache_buster: Date.now()
-        });
-    });
-});        
         console.log(`📦 Retornando ${products.length} produtos atualizados`);
         res.json({ 
             success: true, 
