@@ -1302,17 +1302,43 @@
             document.getElementById('editPlano2').value = product.plano_2 || '';
             document.getElementById('editPlano3').value = product.plano_3 || '';
             
-            // Fill gallery
-            const editGalleryContainer = document.getElementById('editGalleryItems');
-            editGalleryContainer.innerHTML = '';
-            
-            if (product.gallery && product.gallery.length > 0) {
-                product.gallery.forEach(item => {
-                    addEditGalleryItem(item.type, item.url);
-                });
-            } else {
-                addEditGalleryItem();
+           // Fill gallery - CORRIGIDO
+const editGalleryContainer = document.getElementById('editGalleryItems');
+editGalleryContainer.innerHTML = '';
+
+console.log('🖼️ Carregando galeria do produto:', product.name);
+console.log('📊 Gallery data:', product.gallery);
+
+// Verificar se gallery existe e processar
+if (product.gallery) {
+    let galleryItems = product.gallery;
+    
+    // Se for string, fazer parse
+    if (typeof galleryItems === 'string') {
+        try {
+            galleryItems = JSON.parse(galleryItems);
+        } catch(e) {
+            console.error('Erro ao parsear gallery:', e);
+            galleryItems = [];
+        }
+    }
+    
+    // Se tiver itens, adicionar
+    if (Array.isArray(galleryItems) && galleryItems.length > 0) {
+        console.log(`✅ Adicionando ${galleryItems.length} itens à galeria`);
+        galleryItems.forEach(item => {
+            if (item && item.url) {
+                addEditGalleryItem(item.type || 'image', item.url);
             }
+        });
+    } else {
+        console.log('⚠️ Galeria vazia, adicionando item padrão');
+        addEditGalleryItem();
+    }
+} else {
+    console.log('⚠️ Sem galeria, adicionando item padrão');
+    addEditGalleryItem();
+}
             
             // Show modal
             document.getElementById('editModal').style.display = 'flex';
