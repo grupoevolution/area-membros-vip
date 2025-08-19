@@ -1585,7 +1585,33 @@
             console.log('📊 Tipo:', typeof gallery);
             console.log('📊 É array?', Array.isArray(gallery));
             console.log('📊 Tamanho:', gallery ? gallery.length : 'N/A');
-            
+
+            // CORREÇÃO: Se gallery é string JSON, fazer parse
+    if (typeof gallery === 'string') {
+        try {
+            gallery = JSON.parse(gallery);
+            console.log('✅ Gallery parseada de string para array');
+        } catch(e) {
+            console.error('❌ Erro ao parsear gallery string:', e);
+            gallery = [];
+        }
+    }
+    
+    // CORREÇÃO: Se cada item da gallery for string, fazer parse
+    if (Array.isArray(gallery) && gallery.length > 0 && typeof gallery[0] === 'string') {
+        try {
+            gallery = gallery.map(item => {
+                if (typeof item === 'string') {
+                    return JSON.parse(item);
+                }
+                return item;
+            });
+            console.log('✅ Items da gallery parseados');
+        } catch(e) {
+            console.error('❌ Erro ao parsear items da gallery:', e);
+        }
+    }
+        
             // Limpar galeria anterior
             galleryContainer.innerHTML = '';
             
