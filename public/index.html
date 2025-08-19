@@ -1705,12 +1705,30 @@
                 const data = await response.json();
                 
                 if (data.success) {
-                    console.log(`✅ ${data.products.length} produtos carregados da API`);
-                    console.log(`🎯 ${data.userProducts.length} produtos liberados para o usuário`);
-                    console.log(`📋 Planos ativos:`, data.activePlans);
-                    
-                    // CORREÇÃO: Combinar produtos normais + produtos do usuário
-                    const allProducts = [...data.products];
+    console.log(`✅ ${data.products.length} produtos carregados da API`);
+    console.log(`🎯 ${data.userProducts.length} produtos liberados para o usuário`);
+    console.log(`📋 Planos ativos:`, data.activePlans);
+    
+    // CORREÇÃO: Processar produtos do usuário primeiro
+    const allProducts = [...data.products];
+    const userProductIds = new Set();
+    
+    // Marcar produtos do usuário e adicionar à categoria correta
+    if (data.userProducts && data.userProducts.length > 0) {
+        data.userProducts.forEach(userProduct => {
+            userProductIds.add(userProduct.id);
+            // Encontrar e atualizar o produto na lista principal
+            const index = allProducts.findIndex(p => p.id === userProduct.id);
+            if (index !== -1) {
+                allProducts[index] = {
+                    ...allProducts[index],
+                    category: 'meus_produtos',
+                    originalCategory: allProducts[index].category,
+                    userHasAccess: true
+                };
+            }
+        });
+    }
                     
                     // CORREÇÃO: Adicionar produtos liberados à categoria "meus_produtos"
                     if (data.userProducts && data.userProducts.length > 0) {
