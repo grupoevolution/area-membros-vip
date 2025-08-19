@@ -1698,6 +1698,131 @@
             renderProducts(mockProducts);
         }
 
+       // =============================================================================
+        // PRODUCTS FUNCTIONALITY - TOTALMENTE CORRIGIDO
+        // =============================================================================
+        async function loadProducts() {
+            try {
+                console.log('📦 Carregando produtos para usuário:', currentUser);
+                
+                // CORREÇÃO: Usar o endpoint /api/user/products em vez de /api/products
+                console.log('🔄 Buscando produtos do usuário via API...');
+                const response = await fetch(`${API_BASE}/api/user/products`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Cache-Control': 'no-cache, no-store, must-revalidate',
+                        'Pragma': 'no-cache',
+                        'Expires': '0'
+                    },
+                    body: JSON.stringify({
+                        email: currentUser
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    console.log(`✅ ${data.products.length} produtos carregados da API`);
+                    console.log(`🎯 ${data.userProducts.length} produtos liberados para o usuário`);
+                    console.log(`📋 Planos ativos:`, data.activePlans);
+                    
+                    // CORREÇÃO: Combinar produtos normais + produtos do usuário
+                    const allProducts = [...data.products];
+                    
+                    // CORREÇÃO: Adicionar produtos liberados à categoria "meus_produtos"
+                    if (data.userProducts && data.userProducts.length > 0) {
+                        data.userProducts.forEach(userProduct => {
+                            // Forçar categoria para meus_produtos
+                            userProduct.category = 'meus_produtos';
+                            
+                            // Verificar se já existe na lista (evitar duplicação)
+                            const existsInAll = allProducts.find(p => p.id === userProduct.id);
+                            if (!existsInAll) {
+                                allProducts.push(userProduct);
+                            }
+                            
+                            console.log(`✅ Produto liberado adicionado: ${userProduct.name}`);
+                        });
+                    }
+                    
+                    // Cache dos produtos combinados
+                    const cacheKey = 'vip_products_data';
+                    CacheManager.set(cacheKey, allProducts, CacheManager.EXPIRATION_TIMES.PRODUCTS);
+                    
+                    renderProducts(allProducts);
+                } else {
+                    console.log('⚠️ API não retornou sucesso, usando dados mock');
+                    renderMockProducts();
+                }
+            } catch (error) {
+                console.error('❌ Erro ao carregar produtos:', error);
+                
+                // Fallback para cache ou mock
+                const cacheKey = 'vip_products_data';
+                const cachedProducts = CacheManager.get(cacheKey);
+                
+                if (cachedProducts) {
+                    console.log('📦 Usando cache antigo como fallback');
+                    renderProducts(cachedProducts);
+                } else {
+                    console.log('📦 Usando dados mock como fallback');
+                    renderMockProducts();
+                }
+            }
+        }
+
+        function renderMockProducts() {
+            const mockProducts = [
+                {
+                    id: 1,
+                    name: "Whatsapp Da Fabi",
+                    description: "Clique no botão abaixo e fale com a Fabaine no seu Whatsapp particular",
+                    banner_url: "https://files.catbox.moe/i6sfiz.png",
+                    main_video: "https://e-volutionn.com/wp-content/uploads/2025/07/download-1.mp4",
+                    access_url: "https://wa.me/5511975768554?text=Oi%20Fabi%2C%20vim%20pelo%20APP",
+                    category: "meus_produtos",
+                    plano_1: "PPLQQLST6",
+                    gallery: [
+                        { type: "image", url: "https://e-volutionn.com/wp-content/uploads/2025/07/IMG_7978.jpg", order_index: 0 },
+                        { type: "image", url: "https://e-volutionn.com/wp-content/uploads/2025/07/IMG_7975.jpg", order_index: 1 },
+                        { type: "video", url: "https://e-volutionn.com/wp-content/uploads/2025/05/AMOSTRA-01.mp4", order_index: 2 }
+                    ]
+                },
+                {
+                    id: 2,
+                    name: "Pack Premium Exclusivo",
+                    description: "Conteúdo premium exclusivo para membros VIP. Acesso a lives privadas e materiais únicos.",
+                    banner_url: "https://images.unsplash.com/photo-1494790108755-2616c78d9f14?w=400&h=600&fit=crop",
+                    main_video: "https://www.w3schools.com/html/mov_bbb.mp4",
+                    buy_url: "https://hotmoney.space/",
+                    price: 147.00,
+                    category: "mais_vendidos",
+                    plano_1: "PPLQQLST7",
+                    gallery: [
+                        { type: "video", url: "https://www.w3schools.com/html/mov_bbb.mp4", order_index: 0 },
+                        { type: "image", url: "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=400&h=600&fit=crop", order_index: 1 }
+                    ]
+                },
+                {
+                    id: 3,
+                    name: "Produto Gratuito",
+                    description: "Este é um produto gratuito disponível em meus produtos",
+                    banner_url: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=400&h=600&fit=crop",
+                    access_url: "https://example.com/free-content",
+                    category: "meus_produtos",
+                    gallery: [
+                        { type: "image", url: "https://images.unsplash.com/photo-1494790108755-2616c78d9f14?w=400&h=300&fit=crop", order_index: 0 }
+                    ]
+                }
+            ];
+            
+            const cacheKey = 'vip_products_data';
+            CacheManager.set(cacheKey, mockProducts, 60000);
+            
+            renderProducts(mockProducts);
+        }
+
         // =============================================================================
         // RENDER PRODUCTS - CORRIGIDO COM LÓGICA DE CATEGORIAS
         // =============================================================================
@@ -1718,10 +1843,7 @@
                 if (container) container.innerHTML = '';
             });
 
-            // CORREÇÃO PRINCIPAL: Separar produtos liberados dos produtos normais
-            const productsByCategory = {};
-            const liberatedProductIds = []; // IDs dos produtos liberados
-            
+            // PRIMEIRO: Processar galeria de TODOS os produtos
             products.forEach(product => {
                 // CORREÇÃO: Garantir que gallery está sempre presente e correta
                 if (!product.gallery) {
@@ -1742,7 +1864,13 @@
                 }
                 
                 console.log(`🖼️ Produto ${product.name} - Gallery:`, product.gallery);
-                
+            });
+
+            // SEGUNDO: Separar produtos liberados dos produtos normais
+            const productsByCategory = {};
+            const liberatedProductIds = []; // IDs dos produtos liberados
+            
+            products.forEach(product => {
                 // NOVA LÓGICA: Verificar se produto está liberado (categoria meus_produtos)
                 if (product.category === 'meus_produtos') {
                     // Produto liberado - vai para MEUS PRODUTOS
@@ -1786,11 +1914,12 @@
                 products.forEach(p => console.log(`  - ${p.name}`));
             });
 
-            // Render products in their categories
+            // TERCEIRO: Render products in their categories
             Object.entries(productsByCategory).forEach(([category, categoryProducts]) => {
                 const container = categories[category];
                 if (container) {
                     categoryProducts.forEach(product => {
+                        console.log(`🎯 Criando card para: ${product.name} (categoria: ${category})`);
                         container.appendChild(createProductCard(product));
                     });
                 }
