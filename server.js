@@ -283,11 +283,33 @@ app.get('/api/products', (req, res) => {
         const products = rows.map(row => {
             const product = { ...row };
             
+            // CORREÇÃO: Parse correto da galeria
             if (product.gallery_json) {
                 try {
-                    const galleryItems = product.gallery_json.split(',').map(item => JSON.parse(item));
-                    product.gallery = galleryItems.sort((a, b) => a.order_index - b.order_index);
+                    // Remove o GROUP_CONCAT wrapper e faz parse individual
+                    const galleryString = product.gallery_json;
+                    const items = galleryString.split('},{').map((item, index, arr) => {
+                        if (index === 0 && arr.length > 1) {
+                            return item + '}';
+                        } else if (index === arr.length - 1 && arr.length > 1) {
+                            return '{' + item;
+                        } else if (arr.length > 1) {
+                            return '{' + item + '}';
+                        }
+                        return item;
+                    });
+                    
+                    product.gallery = items.map(item => {
+                        try {
+                            return JSON.parse(item);
+                        } catch (e) {
+                            console.error('Erro ao fazer parse do item:', item);
+                            return null;
+                        }
+                    }).filter(item => item !== null);
+                    
                 } catch (e) {
+                    console.error('❌ Erro ao processar galeria:', e);
                     product.gallery = [];
                 }
             } else {
@@ -298,6 +320,15 @@ app.get('/api/products', (req, res) => {
             return product;
         });
         
+        console.log(`📦 Retornando ${products.length} produtos com galerias`);
+        res.json({ 
+            success: true, 
+            products,
+            timestamp: new Date().toISOString(),
+            cache_buster: Date.now()
+        });
+    });
+});        
         console.log(`📦 Retornando ${products.length} produtos atualizados`);
         res.json({ 
             success: true, 
