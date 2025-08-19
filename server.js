@@ -604,18 +604,39 @@ app.post('/api/user/products', (req, res) => {
             const processedProducts = allProducts.map(row => {
                 const product = { ...row };
                 
-                // Parse gallery JSON
-                if (product.gallery_json) {
-                    try {
-                        const galleryItems = product.gallery_json.split(',').map(item => JSON.parse(item));
-                        product.gallery = galleryItems.sort((a, b) => a.order_index - b.order_index);
-                    } catch (e) {
-                        product.gallery = [];
-                    }
-                } else {
-                    product.gallery = [];
-                }
-                delete product.gallery_json;
+                // Parse gallery JSON - CORREÇÃO DEFINITIVA
+if (product.gallery_json) {
+    try {
+        // Remove o GROUP_CONCAT wrapper e faz parse individual
+        const galleryString = product.gallery_json;
+        const items = galleryString.split('},{').map((item, index, arr) => {
+            if (index === 0 && arr.length > 1) {
+                return item + '}';
+            } else if (index === arr.length - 1 && arr.length > 1) {
+                return '{' + item;
+            } else if (arr.length > 1) {
+                return '{' + item + '}';
+            }
+            return item;
+        });
+        
+        product.gallery = items.map(item => {
+            try {
+                return JSON.parse(item);
+            } catch (e) {
+                console.error('Erro ao fazer parse do item:', item);
+                return null;
+            }
+        }).filter(item => item !== null);
+        
+    } catch (e) {
+        console.error('❌ Erro ao processar galeria:', e);
+        product.gallery = [];
+    }
+} else {
+    product.gallery = [];
+}
+delete product.gallery_json;
                 
                 // LÓGICA PRINCIPAL: Verificar se usuário tem acesso
                 let hasUserAccess = false;
