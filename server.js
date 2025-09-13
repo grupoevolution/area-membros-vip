@@ -882,6 +882,279 @@ app.post('/api/check-access', (req, res) => {
         }
     });
 });
+// ADICIONAR ESTE CÓDIGO NO SEU server.js (após o webhook do PerfectPay)
+
+// =============================================================================
+// WEBHOOK KIRVANO - IMPLEMENTAÇÃO COMPLETA
+// =============================================================================
+
+app.post('/webhook/kirvano', express.json(), (req, res) => {
+    console.log('\n🔔 ===== WEBHOOK KIRVANO RECEBIDO =====');
+    console.log('⏰ Timestamp:', new Date().toLocaleString('pt-BR'));
+    console.log('📦 Body completo:', JSON.stringify(req.body, null, 2));
+    
+    try {
+        const payload = req.body;
+        
+        const {
+            event,
+            status,
+            customer,
+            products,
+            total_price,
+            sale_id,
+            checkout_id
+        } = payload;
+        
+        console.log('\n📊 DADOS EXTRAÍDOS:');
+        console.log('- Evento:', event);
+        console.log('- Status:', status);
+        console.log('- Email do cliente:', customer?.email);
+        console.log('- Produtos:', products?.length || 0);
+        console.log('- Valor da venda:', total_price);
+        console.log('- ID da venda:', sale_id);
+        
+        // Verificar se é uma venda aprovada
+        if (event !== 'SALE_APPROVED' || status !== 'APPROVED') {
+            console.log(`❌ Status não aprovado: ${event} / ${status}`);
+            console.log('============================================\n');
+            return res.json({ success: true, message: 'Status não processado' });
+        }
+        
+        const email = customer?.email;
+        
+        if (!email) {
+            console.log('❌ Email do cliente não encontrado!');
+            console.log('- Customer recebido:', customer);
+            console.log('============================================\n');
+            return res.status(400).json({ 
+                success: false, 
+                error: 'Email do cliente é obrigatório',
+                received: { email, customer }
+            });
+        }
+        
+        if (!products || !Array.isArray(products) || products.length === 0) {
+            console.log('❌ Nenhum produto encontrado na venda!');
+            console.log('- Products recebidos:', products);
+            console.log('============================================\n');
+            return res.status(400).json({ 
+                success: false, 
+                error: 'Lista de produtos é obrigatória',
+                received: { products }
+            });
+        }
+        
+        console.log(`\n🛒 PROCESSANDO ${products.length} PRODUTO(S):`);
+        
+        // Processar cada produto comprado
+        let accessesGranted = 0;
+        let processedProducts = [];
+        
+        const processProduct = (productIndex) => {
+            if (productIndex >= products.length) {
+                // Todos os produtos foram processados
+                console.log(`\n✅ KIRVANO PROCESSADO COM SUCESSO:`);
+                console.log(`- Email: ${email}`);
+                console.log(`- Produtos processados: ${processedProducts.length}`);
+                console.log(`- Acessos liberados: ${accessesGranted}`);
+                console.log(`- ID da venda: ${sale_id}`);
+                console.log('============================================\n');
+                
+                return res.json({ 
+                    success: true, 
+                    message: 'Webhook Kirvano processado com sucesso',
+                    email: email,
+                    products_processed: processedProducts.length,
+                    accesses_granted: accessesGranted,
+                    sale_id: sale_id,
+                    timestamp: new Date().toISOString()
+                });
+            }
+            
+            const product = products[productIndex];
+            const offer_id = product?.offer_id;
+            const product_name = product?.offer_name || product?.name || `Produto ${productIndex + 1}`;
+            
+            if (!offer_id) {
+                console.log(`⚠️ Produto ${productIndex + 1}: offer_id não encontrado`);
+                console.log('- Produto:', product);
+                processProduct(productIndex + 1);
+                return;
+            }
+            
+            console.log(`🔍 Produto ${productIndex + 1}: ${product_name} (${offer_id})`);
+            
+            // Verificar se algum produto do sistema tem esse offer_id
+            const findProductQuery = `
+                SELECT * FROM products 
+                WHERE plano_1 = ? OR plano_2 = ? OR plano_3 = ?
+                LIMIT 1
+            `;
+            
+            db.get(findProductQuery, [offer_id, offer_id, offer_id], (err, product_row) => {
+                if (err) {
+                    console.error(`❌ Erro ao buscar produto para offer_id ${offer_id}:`, err);
+                    processProduct(productIndex + 1);
+                    return;
+                }
+                
+                if (product_row) {
+                    console.log(`✅ Produto encontrado no sistema: ${product_row.name}`);
+                } else {
+                    console.log(`⚠️ Nenhum produto do sistema configurado com offer_id: ${offer_id}`);
+                    console.log(`💡 Configure um produto no painel admin com plano_1/2/3 = ${offer_id}`);
+                }
+                
+                const product_code = product_row?.id || offer_id;
+                
+                // Verificar se já existe acesso para este email/offer_id
+                const checkAccessQuery = `
+                    SELECT * FROM user_access 
+                    WHERE email = ? AND plan_code = ? AND status = 'active'
+                    ORDER BY created_at DESC
+                    LIMIT 1
+                `;
+                
+                db.get(checkAccessQuery, [email, offer_id], (err, existing) => {
+                    if (err) {
+                        console.error(`❌ Erro ao verificar acesso existente para ${offer_id}:`, err);
+                    }
+                    
+                    if (existing) {
+                        console.log(`⚠️ Acesso já existe para ${email} → ${offer_id}`);
+                        processedProducts.push({
+                            offer_id: offer_id,
+                            product_name: product_name,
+                            status: 'already_exists',
+                            access_id: existing.id
+                        });
+                        processProduct(productIndex + 1);
+                        return;
+                    }
+                    
+                    // Liberar acesso
+                    console.log(`🔓 Liberando acesso para: ${email} → ${offer_id}`);
+                    const insertAccessQuery = `
+                        INSERT INTO user_access 
+                        (email, product_code, plan_code, plan_name, sale_amount, payment_id, status, updated_at)
+                        VALUES (?, ?, ?, ?, ?, ?, 'active', CURRENT_TIMESTAMP)
+                    `;
+                    
+                    db.run(insertAccessQuery, [
+                        email,
+                        product_code,
+                        offer_id,
+                        product_name,
+                        total_price || 0,
+                        sale_id || checkout_id
+                    ], function(err) {
+                        if (err) {
+                            console.error(`❌ Erro ao liberar acesso para ${offer_id}:`, err);
+                            processedProducts.push({
+                                offer_id: offer_id,
+                                product_name: product_name,
+                                status: 'error',
+                                error: err.message
+                            });
+                        } else {
+                            console.log(`✅ Acesso liberado: ${email} → ${offer_id} (ID: ${this.lastID})`);
+                            accessesGranted++;
+                            processedProducts.push({
+                                offer_id: offer_id,
+                                product_name: product_name,
+                                status: 'granted',
+                                access_id: this.lastID
+                            });
+                        }
+                        
+                        processProduct(productIndex + 1);
+                    });
+                });
+            });
+        };
+        
+        // Iniciar processamento dos produtos
+        processProduct(0);
+        
+    } catch (error) {
+        console.error('❌ ERRO CRÍTICO no webhook Kirvano:', error);
+        console.log('============================================\n');
+        res.status(400).json({ 
+            success: false, 
+            error: 'Dados inválidos',
+            details: error.message,
+            timestamp: new Date().toISOString()
+        });
+    }
+});
+
+// =============================================================================
+// ENDPOINT DE DEBUG PARA TESTAR KIRVANO
+// =============================================================================
+
+app.post('/debug/simulate-kirvano', (req, res) => {
+    const { email, offer_id } = req.body;
+    
+    if (!email || !offer_id) {
+        return res.status(400).json({ error: 'Email e offer_id são obrigatórios' });
+    }
+    
+    // Simular payload da Kirvano
+    const mockPayload = {
+        event: 'SALE_APPROVED',
+        status: 'APPROVED',
+        sale_id: 'TEST_' + Date.now(),
+        checkout_id: 'CHK_' + Date.now(),
+        total_price: 'R$ 99,99',
+        customer: {
+            email: email,
+            name: 'Cliente Teste',
+            document: '12345678901',
+            phone_number: '11999999999'
+        },
+        products: [{
+            id: 'prod_test_' + Date.now(),
+            name: 'Produto Teste',
+            offer_id: offer_id,
+            offer_name: 'Oferta Teste',
+            description: 'Produto para teste do webhook',
+            price: 'R$ 99,99'
+        }]
+    };
+    
+    console.log('\n🧪 SIMULANDO WEBHOOK KIRVANO:');
+    console.log('📧 Email:', email);
+    console.log('🏷️ Offer ID:', offer_id);
+    
+    // Fazer request interno para o webhook
+    const axios = require('axios');
+    const baseUrl = req.protocol + '://' + req.get('host');
+    
+    axios.post(`${baseUrl}/webhook/kirvano`, mockPayload)
+        .then(response => {
+            res.json({
+                success: true,
+                message: 'Webhook simulado com sucesso',
+                webhook_response: response.data,
+                mock_payload: mockPayload,
+                timestamp: new Date().toISOString()
+            });
+        })
+        .catch(error => {
+            res.status(500).json({
+                success: false,
+                error: 'Erro ao simular webhook',
+                details: error.response?.data || error.message,
+                mock_payload: mockPayload,
+                timestamp: new Date().toISOString()
+            });
+        });
+});
+
+console.log('🔄 Webhook Kirvano configurado em: /webhook/kirvano');
+console.log('🧪 Teste disponível em: POST /debug/simulate-kirvano');
+console.log('📋 Exemplo de teste: { "email": "teste@email.com", "offer_id": "94069d91-6bdf-47b0-b7e2-35c6d384e793" }');
 
 // ADMIN AUTH
 app.post('/api/admin/login', (req, res) => {
